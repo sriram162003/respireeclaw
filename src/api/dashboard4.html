@@ -11,6 +11,23 @@
   --purple:#7c6aff;--blue:#60a5fa;--green:#4ade80;--amber:#fb923c;--red:#f87171;--cyan:#22d3ee;--pink:#f472b6;
   --muted:#4a5568;--text:#e2e8f0;--sub:#94a3b8;--dim:#64748b
 }
+:root[data-theme="light"]{
+  --bg:#f0f2f5;--surface:#ffffff;--card:#ffffff;--border:#d1d5db;
+  --text:#1f2937;--sub:#6b7280;--muted:#9ca3af
+}
+
+/* Theme Toggle */
+.theme-switch{position:relative;width:44px;height:24px;display:inline-flex;align-items:center}
+.theme-switch input{opacity:0;width:0;height:0}
+.theme-slider{position:absolute;inset:0;background:var(--card);border:1px solid var(--border);border-radius:24px;cursor:pointer;transition:all .3s}
+.theme-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--sub);transition:all .3s}
+.theme-switch input:checked+.theme-slider{background:var(--purple);border-color:var(--purple)}
+.theme-switch input:checked+.theme-slider::before{transform:translateX(20px);background:#fff}
+
+/* Glow Effects */
+.btn-primary:hover{box-shadow:0 0 20px #7c6aff55}
+.btn-ghost:hover{border-color:var(--purple);box-shadow:0 0 10px #7c6aff22}
+
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
 
 /* Header */
@@ -147,6 +164,10 @@ textarea{resize:vertical;min-height:60px}
     <div class="hstat blue"><b id="stat-total">0</b> total</div>
   </div>
   <button class="btn btn-primary" onclick="openModal()">＋ New Team</button>
+  <label class="theme-switch" title="Toggle theme" style="margin-left:12px">
+    <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+    <span class="theme-slider"></span>
+  </label>
   <div class="auth-bar" id="auth-bar"></div>
 </header>
 
@@ -223,6 +244,25 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <script>
+// ── Theme Toggle ───────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isLight = html.dataset.theme === 'light';
+  const slider = document.getElementById('theme-toggle');
+  if (slider) slider.checked = !isLight;
+  html.dataset.theme = isLight ? '' : 'light';
+  localStorage.setItem('aura_theme', isLight ? '' : 'light');
+}
+
+(function initTheme() {
+  const saved = localStorage.getItem('aura_theme');
+  if (saved === 'light') {
+    document.documentElement.dataset.theme = 'light';
+  }
+  const slider = document.getElementById('theme-toggle');
+  if (slider) slider.checked = saved === 'light';
+})();
+
 // ── Global Auth Override ────────────────────────────────────────────────────────
 (function() {
   const originalFetch = window.fetch;
