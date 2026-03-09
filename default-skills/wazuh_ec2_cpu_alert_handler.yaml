@@ -1,0 +1,103 @@
+name: wazuh_ec2_cpu_alert_handler
+version: 1.0.0
+description: Automated workflow to handle Wazuh high CPU alerts on AWS EC2 instances. Validates alerts, diagnoses root cause (legitimate load vs suspicious activity), takes corrective action, and notifies the user with full incident report.
+executor: wazuh_ec2_cpu_alert_handler.ts
+enabled: true
+source: self_written
+requires_env: []
+tools:
+  - name: wazuh_handle_alert
+    description: Receive Wazuh alert webhook and initiate incident response workflow
+    parameters:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            instance_id:
+              type: string
+              description: AWS EC2 instance ID
+            cpu_percent:
+              type: number
+              description: Current CPU utilization percentage
+            timestamp:
+              type: string
+              description: Alert timestamp
+            rule_id:
+              type: string
+              description: Wazuh rule identifier
+            duration_minutes:
+              type: number
+              description: Duration of high CPU condition
+          required:
+            - instance_id
+            - cpu_percent
+            - timestamp
+            - rule_id
+      required:
+        - payload
+  - name: wazuh_ec2_action
+    description: Execute EC2 diagnostic and remediation actions including process management and instance isolation
+    parameters:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - diagnose
+            - isolate
+            - terminate
+            - snapshot
+            - scale
+          description: Action to perform on EC2 instance
+        instance_id:
+          type: string
+          description: AWS EC2 instance ID
+        process_id:
+          type: string
+          description: Process ID for targeted termination actions
+      required:
+        - action
+        - instance_id
+  - name: wazuh_log_write
+    description: Log incidents and reports to workspace storage for audit trail
+    parameters:
+      type: object
+      properties:
+        operation:
+          type: string
+          enum:
+            - write
+            - read
+            - append
+          description: File operation type
+        path:
+          type: string
+          description: File path in workspace storage
+        content:
+          type: string
+          description: Content to write to file
+      required:
+        - operation
+        - path
+  - name: wazuh_notify
+    description: Send notification via Telegram with incident summary and report link
+    parameters:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Message text to send to user
+        severity:
+          type: string
+          enum:
+            - INFO
+            - WARNING
+            - CRITICAL
+          description: Alert severity level
+        report_url:
+          type: string
+          description: URL to full incident report in workspace
+      required:
+        - message
+        - severity

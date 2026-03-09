@@ -1,0 +1,37 @@
+name: pdf_editor
+version: 1.0.0
+description: Edit PDF files including merging, splitting, extracting pages, adding text/images, filling forms, and converting to/from other formats. Uses browser-based PDF manipulation tools and APIs.
+executor: pdf_editor.ts
+enabled: true
+source: self_written
+requires_env: []
+tools:
+  - name: browser
+    description: Use browser automation to interact with online PDF tools like iLovePDF, Smallpdf, PDF24 for operations that require web-based processing
+    parameters:
+      type: object
+      properties:
+        action: { type: string, description: "Browser action to perform: open, click, type, read, upload, download" }
+        url: { type: string, description: "URL to open in browser" }
+        selector: { type: string, description: "CSS selector or element description to interact with" }
+        value: { type: string, description: "Value to type or text to enter" }
+        wait_for: { type: string, description: "Element or condition to wait for after action" }
+      required: [action]
+  - name: pdf_read_write
+    description: Read and write PDF files and other documents to/from the workspace filesystem
+    parameters:
+      type: object
+      properties:
+        action: { type: string, description: "Filesystem action: read, write, list, delete, copy, move" }
+        path: { type: string, description: "File path in the workspace" }
+        content: { type: string, description: "Content to write (for write action, base64 for binary files)" }
+        encoding: { type: string, description: "File encoding: utf8, base64, binary" }
+      required: [action, path]
+  - name: pdf_search
+    description: Search for PDF manipulation APIs, tools, documentation, and solutions for specific PDF operations
+    parameters:
+      type: object
+      properties:
+        query: { type: string, description: "Search query for finding PDF tools, APIs, or solutions" }
+        num_results: { type: string, description: "Number of results to return (default: 5)" }
+      required: [query]

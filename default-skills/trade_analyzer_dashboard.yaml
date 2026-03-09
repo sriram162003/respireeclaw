@@ -1,0 +1,22 @@
+name: trade_analyzer_dashboard
+version: 1.0.0
+description: Fetches live XAUSD/stock prices from glint.trade, performs technical analysis with entry signals, stop-loss and take-profit targets, and displays a live dashboard on canvas with price charts, trade signals, and recommendations
+executor: trade_analyzer_dashboard.ts
+enabled: false
+source: self_written
+requires_env: []
+tools:
+  - name: analyze_trade
+    description: Fetches price data from glint.trade, performs technical analysis (SMA, support/resistance, trend), generates BUY/SELL/HOLD signals with entry/stop-loss/take-profit levels, updates canvas dashboard with charts and tables, and logs analysis to workspace
+    parameters:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: Trading symbol to analyze (e.g., XAUSD, AAPL, MSFT, BTCUSD)
+        timeframe:
+          type: string
+          description: Timeframe for technical analysis (e.g., 1h, 4h, 1d, 1w)
+      required:
+        - symbol
+        - timeframe

@@ -1,0 +1,78 @@
+name: trade_analyzer
+version: 1.0.0
+description: Analyzes gold (XAUSD) and stock prices from glint.trade to provide trade entry recommendations. Fetches real-time price data, calculates technical indicators (support/resistance levels, trend direction, momentum), and generates BUY/HOLD/SELL signals with suggested entry prices and stop-loss levels.
+executor: trade_analyzer.ts
+enabled: true
+source: self_written
+requires_env: []
+tools:
+  - name: trade_fetch_price
+    description: Fetch real-time price data from glint.trade for XAUSD and stock symbols
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Search query to find price data on glint.trade (e.g., "XAUSD glint.trade" or "AAPL stock price")
+      required:
+        - query
+  - name: canvas_append
+    description: Display the trade analysis results with signals, entry levels, and recommendations
+    parameters:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the analysis report
+        content:
+          type: string
+          description: Formatted markdown content containing signal, price levels, and reasoning
+      required:
+        - title
+        - content
+  - name: trade_log_write
+    description: Log trade analysis history to workspace file for record keeping
+    parameters:
+      type: object
+      properties:
+        operation:
+          type: string
+          description: Operation type - write or append
+        path:
+          type: string
+          description: File path relative to workspace (e.g., trade_analysis_log.md)
+        content:
+          type: string
+          description: Content to write or append to file
+      required:
+        - operation
+        - path
+        - content
+  - name: reminders
+    description: Schedule periodic trade analysis updates for specific symbols
+    parameters:
+      type: object
+      properties:
+        action:
+          type: string
+          description: Action to schedule (e.g., schedule_analysis)
+        interval:
+          type: string
+          description: Time interval for recurring analysis (e.g., 1h, 4h, 1d)
+        symbol:
+          type: string
+          description: Trading symbol to analyze periodically (e.g., XAUSD, AAPL)
+      required:
+        - action
+        - interval
+        - symbol
+  - name: analyze_trade
+    description: Run on-demand technical analysis for a specific trading symbol
+    parameters:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: Trading symbol to analyze (e.g., XAUSD, XAU, AAPL, GOOGL)
+      required:
+        - symbol

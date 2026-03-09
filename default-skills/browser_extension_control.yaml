@@ -1,0 +1,106 @@
+name: browser_extension_control
+version: 1.0.0
+description: >
+  Control the user's real browser via the Gary Browser Control Chrome extension.
+  Clicks, types, scrolls, reads DOM, runs JS, and takes screenshots on live pages.
+  Extension must be installed and connected to ws://localhost:3002/webextension.
+executor: browser_extension_control.ts
+enabled: true
+source: human
+requires_env: []
+tools:
+  - name: ext_status
+    description: Check if the browser extension is connected to the gateway.
+    parameters:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ext_navigate
+    description: Navigate the active browser tab to a URL.
+    parameters:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Full URL to navigate to (e.g. https://example.com)
+      required: [url]
+
+  - name: ext_click
+    description: Click an element in the active tab by CSS selector.
+    parameters:
+      type: object
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the element to click
+        wait:
+          type: number
+          description: Milliseconds to wait after click (default 500)
+      required: [selector]
+
+  - name: ext_type
+    description: Type text into an input field in the active tab.
+    parameters:
+      type: object
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the input field
+        text:
+          type: string
+          description: Text to type
+        clear:
+          type: boolean
+          description: Clear existing text first (default true)
+      required: [selector, text]
+
+  - name: ext_scroll
+    description: Scroll the active tab page.
+    parameters:
+      type: object
+      properties:
+        direction:
+          type: string
+          description: "Scroll direction: up, down, left, right (default: down)"
+        amount:
+          type: number
+          description: Pixels to scroll (default 500)
+      required: []
+
+  - name: ext_get_text
+    description: Get the text content of an element in the active tab.
+    parameters:
+      type: object
+      properties:
+        selector:
+          type: string
+          description: CSS selector for the element
+      required: [selector]
+
+  - name: ext_find_element
+    description: Check if an element exists in the active tab and get its position/size.
+    parameters:
+      type: object
+      properties:
+        selector:
+          type: string
+          description: CSS selector to find
+      required: [selector]
+
+  - name: ext_execute_js
+    description: Execute arbitrary JavaScript in the active tab and return the result.
+    parameters:
+      type: object
+      properties:
+        code:
+          type: string
+          description: JavaScript code to execute in the page context
+      required: [code]
+
+  - name: ext_screenshot
+    description: Request a screenshot of the current active tab from the extension.
+    parameters:
+      type: object
+      properties: {}
+      required: []
