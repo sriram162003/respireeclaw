@@ -81,6 +81,17 @@ function wf2Db(): Database.Database {
       data TEXT,
       timestamp TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS wf_executions (
+      id TEXT PRIMARY KEY,
+      workflow_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      trigger_type TEXT,
+      started_at TEXT NOT NULL,
+      updated_at TEXT,
+      completed_at TEXT,
+      steps_done INTEGER DEFAULT 0,
+      error TEXT
+    );
   `);
   return db;
 }
@@ -175,6 +186,40 @@ function wf3Db() {
   if (!fs.existsSync(nodePath.dirname(WF_DB_PATH))) return null;
   try {
     const d = new Database(WF_DB_PATH);
+    d.pragma('journal_mode = WAL');
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS saved_workflows (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        steps TEXT NOT NULL,
+        created TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS workflow_runs (
+        workflow_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        data TEXT,
+        timestamp TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS workflow_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workflow_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        data TEXT,
+        timestamp TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS wf_executions (
+        id TEXT PRIMARY KEY,
+        workflow_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        trigger_type TEXT,
+        started_at TEXT NOT NULL,
+        updated_at TEXT,
+        completed_at TEXT,
+        steps_done INTEGER DEFAULT 0,
+        error TEXT
+      );
+    `);
     return d;
   } catch { return null; }
 }
@@ -480,6 +525,12 @@ export class RestAPI {
       'http://localhost:3002/dashboard2',
       'http://localhost:3002/dashboard3',
       'http://localhost:3002/dashboard4',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3002',
+      'http://127.0.0.1:3002/dashboard',
+      'http://127.0.0.1:3002/dashboard2',
+      'http://127.0.0.1:3002/dashboard3',
+      'http://127.0.0.1:3002/dashboard4',
     ];
     if (origin && allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);

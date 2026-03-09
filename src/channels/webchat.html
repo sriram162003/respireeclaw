@@ -204,12 +204,39 @@
     }
 
     /* ── Skills panel ─────────────────────────────────────────────────── */
+    .skill-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .skill-search-row { display: flex; align-items: center; gap: 12px; }
+    .skill-search-wrap { display: flex; align-items: center; gap: 8px; flex: 1; position: relative; }
+    .skill-search {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px 10px 38px;
+      color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    .skill-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .skill-search::placeholder { color: var(--text-faint); }
+    .skill-search-icon { position: absolute; left: 12px; color: var(--text-faint); font-size: 14px; pointer-events: none; }
+    .skill-count { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+
+    .skill-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .skill-filter-btn {
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim);
+      cursor: pointer; transition: all 0.15s; font-family: var(--font);
+    }
+    .skill-filter-btn:hover { border-color: var(--border2); color: var(--text); }
+    .skill-filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
     .skill-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
-      margin-top: 4px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
     }
+    .skill-grid.hidden { display: none; }
+    .skill-no-results { 
+      grid-column: 1 / -1; text-align: center; padding: 40px 20px; 
+      color: var(--text-dim); 
+    }
+    .skill-no-results-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
 
     .skill-card {
       background: var(--surface);
@@ -217,22 +244,29 @@
       border-radius: var(--radius);
       padding: 16px;
       display: flex; flex-direction: column; gap: 10px;
-      transition: border-color 0.2s;
+      transition: all 0.2s ease;
       animation: fadeUp 0.2s ease;
+      cursor: pointer;
     }
-    .skill-card:hover { border-color: var(--border2); }
-    .skill-card.enabled-card { border-color: rgba(124,106,245,0.25); }
+    .skill-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .skill-card.enabled-card { border-color: rgba(124,106,245,0.35); background: linear-gradient(135deg, var(--surface) 0%, rgba(124,106,245,0.08) 100%); }
 
     .skill-card-top { display: flex; align-items: flex-start; gap: 10px; }
     .skill-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      background: var(--accent-dim); border: 1px solid rgba(124,106,245,0.2);
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-dim) 0%, rgba(124,106,245,0.15) 100%);
+      border: 1px solid rgba(124,106,245,0.25);
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px; flex-shrink: 0;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .skill-card.enabled-card .skill-icon {
+      background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+      box-shadow: 0 0 12px var(--accent-glow);
     }
     .skill-info { flex: 1; min-width: 0; }
-    .skill-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .skill-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
     .skill-file { font-size: 11px; color: var(--text-faint); font-family: var(--mono); }
+    .skill-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 
     .skill-desc { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
 
@@ -754,6 +788,20 @@
         <div class="panel-sub">Agent capabilities loaded from ~/.aura/skills/</div>
       </div>
       <div class="panel-body">
+        <div class="skill-header">
+          <div class="skill-search-row">
+            <div class="skill-search-wrap">
+              <span class="skill-search-icon">🔍</span>
+              <input type="text" id="skill-search" class="skill-search" placeholder="Search skills by name, description, or file..." oninput="filterSkills(this.value)" />
+            </div>
+            <span class="skill-count" id="skill-count">0 skills</span>
+          </div>
+          <div class="skill-filters" id="skill-filters">
+            <button class="skill-filter-btn active" data-filter="all" onclick="setSkillFilter('all')">All</button>
+            <button class="skill-filter-btn" data-filter="enabled" onclick="setSkillFilter('enabled')">Enabled</button>
+            <button class="skill-filter-btn" data-filter="disabled" onclick="setSkillFilter('disabled')">Disabled</button>
+          </div>
+        </div>
         <div id="skills-error" class="error-state" style="display:none">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
           <span id="skills-error-msg">Failed to load skills</span>
@@ -1074,7 +1122,10 @@ function saveAuthKey() {
 function connect() {
   const token = getWsToken();
   const wsUrl = token ? `ws://${location.host}?token=${token}` : `ws://${location.host}`;
-  try { ws = new WebSocket(wsUrl); } catch { return; }
+  try { ws = new WebSocket(wsUrl); } catch { 
+    setStatus('disconnected');
+    return; 
+  }
 
   ws.onopen = () => setStatus('connected');
 
@@ -1090,11 +1141,20 @@ function connect() {
     } catch {}
   };
 
+  ws.onerror = (e) => {
+    console.error('WebSocket error:', e);
+  };
+
   ws.onclose = (e) => { 
     // If closed with code 4001, show auth error
     if (e.code === 4001) {
       setStatus('auth-required');
       localStorage.removeItem('aura_api_key');
+      return;
+    }
+    if (e.code === 1006) {
+      // Abnormal closure - try again
+      setTimeout(connect, 3000);
       return;
     }
     setStatus('disconnected'); 
@@ -1359,6 +1419,7 @@ function showPanel(name) {
 
   // Start panel-specific data + auto-refresh
   if (name === 'skills') {
+    setTimeout(() => document.getElementById('skill-search')?.focus(), 100);
     loadSkills();
     panelTimer = setInterval(loadSkills, 30000);
   } else if (name === 'nodes') {
@@ -1415,20 +1476,56 @@ function updateUptimePill() {
 }
 
 // ── Skills panel ───────────────────────────────────────────────────────────
+let ALL_SKILLS = [];
+let currentSkillFilter = 'all';
+let currentSkillSearch = '';
+
 async function loadSkills() {
   hideErr('skills-error', 'skills-error-msg');
   try {
     const skills = await api('/api/skills');
-    renderSkills(skills);
+    ALL_SKILLS = skills || [];
+    document.getElementById('skill-count').textContent = `${ALL_SKILLS.length} skill${ALL_SKILLS.length !== 1 ? 's' : ''}`;
+    filterSkills(currentSkillSearch);
   } catch (err) {
     showErr('skills-error', 'skills-error-msg', `Failed to load skills: ${err.message}`);
+    document.getElementById('skill-count').textContent = `${ALL_SKILLS.length} skill${ALL_SKILLS.length !== 1 ? 's' : ''}`;
   }
+}
+
+function setSkillFilter(filter) {
+  currentSkillFilter = filter;
+  document.querySelectorAll('.skill-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  filterSkills(currentSkillSearch);
+}
+
+function filterSkills(q) {
+  currentSkillSearch = q;
+  q = q.toLowerCase().trim();
+  const filtered = ALL_SKILLS.filter(s => {
+    const name = (s.name || '').toLowerCase();
+    const desc = (s.description || '').toLowerCase();
+    const file = (s.file || s.executor || '').toLowerCase();
+    const matchesSearch = !q || name.includes(q) || desc.includes(q) || file.includes(q);
+    const matchesFilter = currentSkillFilter === 'all' || 
+      (currentSkillFilter === 'enabled' && s.enabled) ||
+      (currentSkillFilter === 'disabled' && !s.enabled);
+    return matchesSearch && matchesFilter;
+  });
+  renderSkills(filtered);
+  document.getElementById('skill-count').textContent = `${filtered.length} of ${ALL_SKILLS.length}`;
 }
 
 function renderSkills(skills) {
   const grid = document.getElementById('skills-grid');
   if (!skills || skills.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚡</div>No skills loaded yet</div>';
+    grid.innerHTML = `<div class="skill-no-results">
+      <div class="skill-no-results-icon">🔍</div>
+      <div>No skills found</div>
+      <div style="font-size:12px;color:var(--text-faint);margin-top:4px">Try adjusting your search or filters</div>
+    </div>`;
     return;
   }
   grid.innerHTML = skills.map(s => `
@@ -1437,13 +1534,15 @@ function renderSkills(skills) {
         <div class="skill-icon">⚡</div>
         <div class="skill-info">
           <div class="skill-name" title="${esc(s.name)}">${esc(s.name)}</div>
-          <div class="skill-file">${esc(s.file || s.executor || '')}</div>
+          <div class="skill-meta">
+            <span class="skill-file">${esc(s.file || s.executor || 'No file')}</span>
+          </div>
         </div>
       </div>
-      <div class="skill-desc">${esc(s.description || 'No description')}</div>
+      <div class="skill-desc">${esc(s.description || 'No description available')}</div>
       <div class="skill-footer">
         <span class="skill-badge ${s.enabled ? 'on' : 'off'}">${s.enabled ? 'Enabled' : 'Disabled'}</span>
-        <label class="toggle-wrap" title="${s.enabled ? 'Disable' : 'Enable'} skill">
+        <label class="toggle-wrap" title="${s.enabled ? 'Disable' : 'Enable'} skill" onclick="event.stopPropagation()">
           <div class="toggle">
             <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSkill('${esc(s.name)}', this)" />
             <div class="toggle-track"></div>
