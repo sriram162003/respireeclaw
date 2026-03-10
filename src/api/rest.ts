@@ -65,7 +65,9 @@ function wf2Db(): Database.Database {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       steps TEXT NOT NULL,
-      created TEXT NOT NULL
+      created TEXT NOT NULL,
+      schedule TEXT,
+      enabled INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS workflow_runs (
       workflow_id TEXT PRIMARY KEY,
@@ -81,16 +83,27 @@ function wf2Db(): Database.Database {
       data TEXT,
       timestamp TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS wf_executions (
+      id TEXT PRIMARY KEY,
+      workflow_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      trigger_type TEXT,
+      started_at TEXT NOT NULL,
+      updated_at TEXT,
+      completed_at TEXT,
+      steps_done INTEGER DEFAULT 0,
+      error TEXT
+    );
   `);
   return db;
 }
 
-function loadSavedWorkflows(): Array<{ id: string; name: string; steps: WorkflowStep[]; created: string }> {
+function loadSavedWorkflows(): Array<{ id: string; name: string; steps: WorkflowStep[]; created: string; schedule?: string; enabled?: number }> {
   try {
     const db = wf2Db();
-    const rows = db.prepare('SELECT id, name, steps, created FROM saved_workflows ORDER BY created DESC').all() as Array<{ id: string; name: string; steps: string; created: string }>;
+    const rows = db.prepare('SELECT id, name, steps, created, schedule, enabled FROM saved_workflows ORDER BY created DESC').all() as Array<{ id: string; name: string; steps: string; created: string; schedule: string | null; enabled: number }>;
     db.close();
-    return rows.map(r => ({ id: r.id, name: r.name, steps: JSON.parse(r.steps), created: r.created }));
+    return rows.map(r => ({ id: r.id, name: r.name, steps: JSON.parse(r.steps), created: r.created, schedule: r.schedule || undefined, enabled: r.enabled }));
   } catch { return []; }
 }
 
@@ -130,10 +143,10 @@ function saveWorkflowRun(entry: { workflow_id: string; status: string; data: unk
   } catch { /* non-fatal */ }
 }
 
-function saveSavedWorkflow(id: string, name: string, steps: WorkflowStep[]): void {
+function saveSavedWorkflow(id: string, name: string, steps: WorkflowStep[], schedule?: string, enabled?: number): void {
   try {
     const db = wf2Db();
-    db.prepare('INSERT OR REPLACE INTO saved_workflows (id, name, steps, created) VALUES (?, ?, ?, ?)').run(id, name, JSON.stringify(steps), new Date().toISOString());
+    db.prepare('INSERT OR REPLACE INTO saved_workflows (id, name, steps, created, schedule, enabled) VALUES (?, ?, ?, ?, ?, ?)').run(id, name, JSON.stringify(steps), new Date().toISOString(), schedule || null, enabled ?? 0);
     db.close();
   } catch { /* non-fatal */ }
 }
@@ -147,7 +160,7 @@ function deleteSavedWorkflow(id: string): void {
 }
 
 // Initialize persisted data
-const savedWorkflows: Array<{ id: string; name: string; steps: WorkflowStep[]; created: string }> = loadSavedWorkflows();
+const savedWorkflows: Array<{ id: string; name: string; steps: WorkflowStep[]; created: string; schedule?: string; enabled?: number }> = loadSavedWorkflows();
 const persistedRuns = loadWorkflowEvents();
 for (const e of persistedRuns) {
   workflowUpdates.set(e.workflow_id, e);
@@ -175,6 +188,40 @@ function wf3Db() {
   if (!fs.existsSync(nodePath.dirname(WF_DB_PATH))) return null;
   try {
     const d = new Database(WF_DB_PATH);
+    d.pragma('journal_mode = WAL');
+    d.exec(`
+      CREATE TABLE IF NOT EXISTS saved_workflows (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        steps TEXT NOT NULL,
+        created TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS workflow_runs (
+        workflow_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        data TEXT,
+        timestamp TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS workflow_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workflow_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        data TEXT,
+        timestamp TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS wf_executions (
+        id TEXT PRIMARY KEY,
+        workflow_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        trigger_type TEXT,
+        started_at TEXT NOT NULL,
+        updated_at TEXT,
+        completed_at TEXT,
+        steps_done INTEGER DEFAULT 0,
+        error TEXT
+      );
+    `);
     return d;
   } catch { return null; }
 }
@@ -416,6 +463,33 @@ export class RestAPI {
     this.wss    = new WebSocketServer({ noServer: true });
   }
 
+  private matchesCron(expr: string, date: Date): boolean {
+    const parts = expr.trim().split(/\s+/);
+    if (parts.length !== 5) return false;
+    const [min, hour, dom, mon, dow] = parts;
+    const fieldMatch = (field: string | undefined, val: number): boolean => {
+      if (!field || field === '*') return true;
+      if (field.startsWith('*/')) {
+        const step = parseInt(field.slice(2), 10);
+        return step > 0 && val % step === 0;
+      }
+      return field.split(',').some(part => {
+        if (part.includes('-')) {
+          const [lo, hi] = part.split('-').map(Number);
+          return val >= lo! && val <= hi!;
+        }
+        return parseInt(part, 10) === val;
+      });
+    };
+    return fieldMatch(min, date.getMinutes()) &&
+           fieldMatch(hour, date.getHours()) &&
+           fieldMatch(dom, date.getDate()) &&
+           fieldMatch(mon, date.getMonth() + 1) &&
+           fieldMatch(dow, date.getDay());
+  }
+
+  private lastScheduleCheck = '';
+
   async start(): Promise<void> {
     const { bind_address, rest_port } = this.params.config.security;
 
@@ -458,6 +532,22 @@ export class RestAPI {
         resolve();
       });
     });
+
+    // Schedule checker for dashboard2 workflows - runs every minute
+    setInterval(() => {
+      const now = new Date();
+      const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+      if (this.lastScheduleCheck === minuteKey) return;
+      this.lastScheduleCheck = minuteKey;
+
+      for (const wf of savedWorkflows) {
+        if (!wf.schedule || !wf.enabled) continue;
+        if (!this.matchesCron(wf.schedule, now)) continue;
+        const workflowId = `${wf.name.toLowerCase().replace(/\s+/g, '-')}-sched-${Date.now().toString(36)}`;
+        console.log(`[REST] Running scheduled workflow: ${wf.name} (${wf.schedule})`);
+        runWorkflowReal(workflowId, wf.name, wf.steps, this.params.skillsEngine).catch(err => console.error('[REST] Scheduled workflow error:', err));
+      }
+    }, 60_000);
   }
 
   async stop(): Promise<void> {
@@ -480,6 +570,12 @@ export class RestAPI {
       'http://localhost:3002/dashboard2',
       'http://localhost:3002/dashboard3',
       'http://localhost:3002/dashboard4',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3002',
+      'http://127.0.0.1:3002/dashboard',
+      'http://127.0.0.1:3002/dashboard2',
+      'http://127.0.0.1:3002/dashboard3',
+      'http://127.0.0.1:3002/dashboard4',
     ];
     if (origin && allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
@@ -874,10 +970,11 @@ export class RestAPI {
       if (method === 'POST' && path === '/dashboard2/api/save') {
         if (!checkDashboardAuth(req, res)) return;
         const body = await this.readBody(req);
-        const wf = JSON.parse(body) as { name: string; steps: WorkflowStep[] };
+        const wf = JSON.parse(body) as { name: string; steps: WorkflowStep[]; schedule?: string; enabled?: number };
         const id = `wf-${Date.now().toString(36)}`;
-        savedWorkflows.push({ id, name: wf.name, steps: wf.steps, created: new Date().toISOString() });
-        saveSavedWorkflow(id, wf.name, wf.steps);
+        const enabled = wf.enabled ?? (wf.schedule ? 1 : 0);
+        savedWorkflows.push({ id, name: wf.name, steps: wf.steps, created: new Date().toISOString(), schedule: wf.schedule, enabled });
+        saveSavedWorkflow(id, wf.name, wf.steps, wf.schedule, enabled);
         return this.json(res, 200, { id });
       }
 
@@ -889,6 +986,24 @@ export class RestAPI {
         const workflowId = `${wf.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now().toString(36)}`;
         runWorkflowReal(workflowId, wf.name, wf.steps, this.params.skillsEngine).catch(console.error);
         return this.json(res, 200, { workflow_id: workflowId, started: true });
+      }
+
+      // POST toggle schedule for a workflow
+      const scheduleToggleMatch = path.match(/^\/dashboard2\/api\/workflows\/(.+)\/schedule$/);
+      if (method === 'POST' && scheduleToggleMatch) {
+        if (!checkDashboardAuth(req, res)) return;
+        const id = decodeURIComponent(scheduleToggleMatch[1]!);
+        const body = await this.readBody(req);
+        const { enabled } = JSON.parse(body) as { enabled: number };
+        const wf = savedWorkflows.find(w => w.id === id);
+        if (!wf) return this.json(res, 404, { error: 'Workflow not found' });
+        wf.enabled = enabled;
+        try {
+          const db = wf2Db();
+          db.prepare('UPDATE saved_workflows SET enabled = ? WHERE id = ?').run(enabled, id);
+          db.close();
+        } catch { /* non-fatal */ }
+        return this.json(res, 200, { enabled });
       }
 
       // --- Dashboard UI ---

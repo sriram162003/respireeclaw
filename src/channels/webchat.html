@@ -39,6 +39,75 @@
       --sidebar-w:   64px;
     }
 
+    [data-theme="light"] {
+      --bg:          #f5f6fa;
+      --surface:     #ffffff;
+      --surface2:    #e8e9ef;
+      --surface3:    #dcdfe8;
+      --border:      #d0d2de;
+      --border2:     #b8bbcc;
+      --accent:      #6c5ce7;
+      --accent-glow: rgba(108,92,231,0.2);
+      --accent-dim:  #ede9fd;
+      --teal:        #00a885;
+      --teal-dim:    rgba(0,168,133,0.15);
+      --red:         #e84343;
+      --red-dim:     rgba(232,67,67,0.12);
+      --text:        #2d3436;
+      --text-dim:    #636e72;
+      --text-faint:  #b2bec3;
+      --user-bg:     #e3e7f5;
+      --user-border: #c5cadb;
+      --agent-bg:    #ffffff;
+      --code-bg:     #f1f2f6;
+    }
+
+    .theme-picker {
+      position: absolute; top: 50px; right: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      width: 220px; display: none; z-index: 100;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .theme-picker.show { display: block; animation: fadeUp 0.15s; }
+    .theme-picker h4 { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+    .color-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .color-row label { font-size: 12px; color: var(--text-dim); width: 70px; }
+    .color-row input[type="color"] {
+      width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer;
+      background: transparent; padding: 0;
+    }
+    .color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-row input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); border-radius: 6px; }
+    .theme-presets { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .preset-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .preset-btn:hover { transform: scale(1.15); }
+    .preset-btn.active { border-color: var(--text); }
+
+    .theme-toggle-row { display: flex; align-items: center; gap: 12px; justify-content: center; }
+    .theme-toggle-label { font-size: 12px; color: var(--text-dim); }
+    .theme-switch { position: relative; width: 48px; height: 26px; }
+    .theme-switch input { opacity: 0; width: 0; height: 0; }
+    .theme-slider {
+      position: absolute; inset: 0;
+      background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 26px; cursor: pointer; transition: all 0.3s;
+    }
+    .theme-slider::before {
+      content: ''; position: absolute; left: 3px; top: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--text-dim); transition: all 0.3s;
+    }
+    .theme-switch input:checked + .theme-slider { background: var(--accent-dim); border-color: var(--accent); }
+    .theme-switch input:checked + .theme-slider::before { transform: translateX(22px); background: var(--accent); }
+
+    .glow-card { box-shadow: 0 0 20px var(--accent-glow); }
+    .glow-text { text-shadow: 0 0 10px var(--accent-glow); }
+    .glow-border { border-color: var(--accent) !important; box-shadow: 0 0 12px var(--accent-glow); }
+
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 
     /* ── App shell — two-column grid ───────────────────────────────────── */
@@ -91,7 +160,7 @@
     }
     .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
     .nav-item:hover { background: var(--surface2); color: var(--text-dim); border-color: var(--border); }
-    .nav-item.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(124,106,245,0.3); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(124,106,245,0.3); box-shadow: 0 0 15px var(--accent-glow); }
 
     .nav-spacer { flex: 1; }
 
@@ -147,7 +216,8 @@
     }
     .hdr-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
     .hdr-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
-    .hdr-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .hdr-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+    .hdr-btn:hover { box-shadow: 0 0 12px var(--accent-glow); }
 
     /* ── Reconnect banner ─────────────────────────────────────────────── */
     #banner {
@@ -204,12 +274,52 @@
     }
 
     /* ── Skills panel ─────────────────────────────────────────────────── */
+    .skill-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .skill-search-row { display: flex; align-items: center; gap: 12px; }
+    .skill-search-wrap { display: flex; align-items: center; gap: 8px; flex: 1; position: relative; }
+    .skill-search {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px 10px 38px;
+      color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    .skill-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .skill-search::placeholder { color: var(--text-faint); }
+    .skill-search-icon { position: absolute; left: 12px; color: var(--text-faint); font-size: 14px; pointer-events: none; }
+    .skill-count { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+
+    .skill-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .skill-filter-btn {
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim);
+      cursor: pointer; transition: all 0.15s; font-family: var(--font);
+    }
+    .skill-filter-btn:hover { border-color: var(--border2); color: var(--text); }
+    .skill-filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
     .skill-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
-      margin-top: 4px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
     }
+    .skill-grid.hidden { display: none; }
+    .skill-no-results { 
+      grid-column: 1 / -1; text-align: center; padding: 40px 20px; 
+      color: var(--text-dim); 
+    }
+    .skill-no-results-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .skeleton-icon { width: 40px; height: 40px; border-radius: 10px; }
+    .skeleton-title { height: 18px; width: 60%; }
+    .skeleton-text { height: 14px; width: 80%; }
+    .skeleton-text-sm { height: 12px; width: 40%; }
 
     .skill-card {
       background: var(--surface);
@@ -217,22 +327,29 @@
       border-radius: var(--radius);
       padding: 16px;
       display: flex; flex-direction: column; gap: 10px;
-      transition: border-color 0.2s;
+      transition: all 0.2s ease;
       animation: fadeUp 0.2s ease;
+      cursor: pointer;
     }
-    .skill-card:hover { border-color: var(--border2); }
-    .skill-card.enabled-card { border-color: rgba(124,106,245,0.25); }
+    .skill-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .skill-card.enabled-card { border-color: rgba(124,106,245,0.35); background: linear-gradient(135deg, var(--surface) 0%, rgba(124,106,245,0.08) 100%); box-shadow: 0 0 20px var(--accent-glow); }
 
     .skill-card-top { display: flex; align-items: flex-start; gap: 10px; }
     .skill-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      background: var(--accent-dim); border: 1px solid rgba(124,106,245,0.2);
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-dim) 0%, rgba(124,106,245,0.15) 100%);
+      border: 1px solid rgba(124,106,245,0.25);
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px; flex-shrink: 0;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .skill-card.enabled-card .skill-icon {
+      background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+      box-shadow: 0 0 12px var(--accent-glow);
     }
     .skill-info { flex: 1; min-width: 0; }
-    .skill-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .skill-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
     .skill-file { font-size: 11px; color: var(--text-faint); font-family: var(--mono); }
+    .skill-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 
     .skill-desc { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
 
@@ -382,10 +499,22 @@
     #main { display: flex; flex: 1; overflow: hidden; }
     #chat-col { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow: hidden; }
 
-    #msgs { flex: 1; overflow-y: auto; padding: 24px 20px 12px; display: flex; flex-direction: column; gap: 6px; }
+    #msgs { flex: 1; overflow-y: auto; padding: 24px 20px 12px; display: flex; flex-direction: column; gap: 6px; position: relative; }
     #msgs::-webkit-scrollbar { width: 5px; }
     #msgs::-webkit-scrollbar-track { background: transparent; }
     #msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    #scroll-bottom {
+      position: absolute; bottom: 80px; right: 24px;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--accent); border: none; color: #fff;
+      display: none; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(124,106,245,0.4);
+      transition: all 0.2s; z-index: 10;
+    }
+    #scroll-bottom:hover { transform: scale(1.1); background: #9580ff; }
+    #scroll-bottom.show { display: flex; animation: fadeUp 0.2s; }
+    #scroll-bottom svg { width: 20px; height: 20px; }
 
     #welcome {
       display: flex; flex-direction: column; align-items: center;
@@ -418,6 +547,25 @@
     .group.user  .bubble { background: var(--user-bg);  border: 1px solid var(--user-border); border-bottom-right-radius: 4px; }
     .group.agent .msg-row:first-child .bubble { border-top-left-radius: 18px; }
     .group.user  .msg-row:first-child .bubble { border-top-right-radius: 18px; }
+
+    .msg-actions {
+      position: absolute; top: -8px; right: -8px;
+      display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px; z-index: 5;
+    }
+    .group.user .msg-actions { right: auto; left: -8px; }
+    .msg-row:hover .msg-actions { opacity: 1; }
+    .msg-action-btn {
+      width: 24px; height: 24px; border: none; background: transparent;
+      color: var(--text-dim); border-radius: 4px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .msg-action-btn:hover { background: var(--surface3); color: var(--text); }
+    .msg-action-btn.copy-btn-msg:hover { color: var(--teal); }
+    .msg-action-btn.delete-btn-msg:hover { color: var(--red); }
+    .msg-action-btn svg { width: 14px; height: 14px; }
 
     .bubble p { margin: 0 0 8px; } .bubble p:last-child { margin-bottom: 0; }
     .bubble h1 { font-size: 1.2em; font-weight: 600; margin: 12px 0 6px; }
@@ -474,7 +622,7 @@
     #input::-webkit-scrollbar { width: 4px; }
     #input::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
     #send { width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--accent); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
-    #send:hover   { background: #9580ff; transform: scale(1.06); }
+    #send:hover   { background: #9580ff; transform: scale(1.06); box-shadow: 0 0 16px var(--accent-glow); }
     #send:active  { transform: scale(0.94); }
     #send:disabled{ background: var(--surface3); cursor: default; transform: none; }
     #send svg { width: 16px; height: 16px; }
@@ -679,6 +827,49 @@
     <div class="hdr-pill" id="llm-badge" style="display:none"></div>
     <div class="hdr-pill" id="uptime-badge" style="display:none"></div>
     <div class="hdr-space"></div>
+    <button class="hdr-btn" id="theme-btn" onclick="toggleThemePicker(event)" title="Toggle theme">
+      <svg id="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <div class="theme-picker" id="theme-picker">
+      <h4>Theme</h4>
+      <div class="theme-toggle-row">
+        <span class="theme-toggle-label">Dark</span>
+        <label class="theme-switch">
+          <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+          <span class="theme-slider"></span>
+        </label>
+        <span class="theme-toggle-label">Light</span>
+      </div>
+      <h4 style="margin-top:20px">Customize Colors</h4>
+      <div class="color-row">
+        <label>Accent</label>
+        <input type="color" id="color-accent" value="#7c6af5" onchange="updateAccentColor(this.value)">
+      </div>
+      <div class="color-row">
+        <label>Teal</label>
+        <input type="color" id="color-teal" value="#00d4aa" onchange="updateTealColor(this.value)">
+      </div>
+      <div class="color-row">
+        <label>Red</label>
+        <input type="color" id="color-red" value="#ff5566" onchange="updateRedColor(this.value)">
+      </div>
+      <div class="color-row">
+        <label>Background</label>
+        <input type="color" id="color-bg" value="#0b0b14" onchange="updateBgColor(this.value)">
+      </div>
+      <h4 style="margin-top:16px">Presets</h4>
+      <div class="theme-presets">
+        <button class="preset-btn active" style="background:linear-gradient(135deg,#7c6af5,#a855f7)" data-accent="#7c6af5" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#06b6d4,#0891b2)" data-accent="#06b6d4" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#f59e0b,#f97316)" data-accent="#f59e0b" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#10b981,#059669)" data-accent="#10b981" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#ec4899,#db2777)" data-accent="#ec4899" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#3b82f6,#2563eb)" data-accent="#3b82f6" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626)" data-accent="#ef4444" onclick="applyPreset(this)"></button>
+        <button class="preset-btn" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)" data-accent="#8b5cf6" onclick="applyPreset(this)"></button>
+      </div>
+    </div>
     <div id="canvas-btn-wrap">
       <button class="hdr-btn" id="canvas-btn" onclick="toggleCanvas()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -712,6 +903,11 @@
               <p>Your personal AI assistant — ask me anything or give me a task to run.</p>
             </div>
           </div>
+          <button id="scroll-bottom" onclick="scrollToBottom()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
           <div id="typing">
             <div class="av agent" id="typing-av">A</div>
             <div class="dots-bubble">
@@ -754,6 +950,20 @@
         <div class="panel-sub">Agent capabilities loaded from ~/.aura/skills/</div>
       </div>
       <div class="panel-body">
+        <div class="skill-header">
+          <div class="skill-search-row">
+            <div class="skill-search-wrap">
+              <span class="skill-search-icon">🔍</span>
+              <input type="text" id="skill-search" class="skill-search" placeholder="Search skills by name, description, or file..." oninput="filterSkills(this.value)" />
+            </div>
+            <span class="skill-count" id="skill-count">0 skills</span>
+          </div>
+          <div class="skill-filters" id="skill-filters">
+            <button class="skill-filter-btn active" data-filter="all" onclick="setSkillFilter('all')">All</button>
+            <button class="skill-filter-btn" data-filter="enabled" onclick="setSkillFilter('enabled')">Enabled</button>
+            <button class="skill-filter-btn" data-filter="disabled" onclick="setSkillFilter('disabled')">Disabled</button>
+          </div>
+        </div>
         <div id="skills-error" class="error-state" style="display:none">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
           <span id="skills-error-msg">Failed to load skills</span>
@@ -954,6 +1164,20 @@ const $welcomeH    = document.getElementById('welcome-h');
 const $canvasPanel = document.getElementById('canvas');
 const $canvasBody  = document.getElementById('canvas-body');
 const $canvasBtn   = document.getElementById('canvas-btn');
+const $scrollBtn   = document.getElementById('scroll-bottom');
+
+let atBottom = true;
+
+$msgs.addEventListener('scroll', () => {
+  const { scrollTop, scrollHeight, clientHeight } = $msgs;
+  atBottom = scrollHeight - scrollTop - clientHeight < 100;
+  $scrollBtn.classList.toggle('show', !atBottom);
+});
+
+function scrollToBottom() {
+  $msgs.scrollTop = $msgs.scrollHeight;
+  $input.focus();
+}
 
 // ── State ──────────────────────────────────────────────────────────────────
 let ws          = null;
@@ -1074,7 +1298,10 @@ function saveAuthKey() {
 function connect() {
   const token = getWsToken();
   const wsUrl = token ? `ws://${location.host}?token=${token}` : `ws://${location.host}`;
-  try { ws = new WebSocket(wsUrl); } catch { return; }
+  try { ws = new WebSocket(wsUrl); } catch { 
+    setStatus('disconnected');
+    return; 
+  }
 
   ws.onopen = () => setStatus('connected');
 
@@ -1090,11 +1317,20 @@ function connect() {
     } catch {}
   };
 
+  ws.onerror = (e) => {
+    console.error('WebSocket error:', e);
+  };
+
   ws.onclose = (e) => { 
     // If closed with code 4001, show auth error
     if (e.code === 4001) {
       setStatus('auth-required');
       localStorage.removeItem('aura_api_key');
+      return;
+    }
+    if (e.code === 1006) {
+      // Abnormal closure - try again
+      setTimeout(connect, 3000);
       return;
     }
     setStatus('disconnected'); 
@@ -1254,8 +1490,23 @@ function appendMsg(role, text) {
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
+  bubble.id = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   bubble.innerHTML = renderMd(text);
   row.appendChild(bubble);
+
+  if (role === 'user') {
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    actions.innerHTML = `
+      <button class="msg-action-btn copy-btn-msg" title="Copy" onclick="copyMessage('${bubble.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+      <button class="msg-action-btn delete-btn-msg" title="Delete" onclick="deleteMessage(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    `;
+    row.appendChild(actions);
+  }
 
   group.appendChild(row);
 
@@ -1264,6 +1515,33 @@ function appendMsg(role, text) {
   tsEl.textContent = time;
 
   scrollBottom();
+}
+
+function copyMessage(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    const text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text);
+    showToast('Message copied!');
+  }
+}
+
+function deleteMessage(btn) {
+  const row = btn.closest('.msg-row');
+  const group = btn.closest('.group');
+  if (row) row.remove();
+  if (group && group.querySelectorAll('.msg-row').length === 0) group.remove();
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;z-index:1000;animation:fadeUp 0.2s';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
 }
 
 function scrollBottom() { $msgs.scrollTo({ top: $msgs.scrollHeight, behavior: 'smooth' }); }
@@ -1359,6 +1637,7 @@ function showPanel(name) {
 
   // Start panel-specific data + auto-refresh
   if (name === 'skills') {
+    setTimeout(() => document.getElementById('skill-search')?.focus(), 100);
     loadSkills();
     panelTimer = setInterval(loadSkills, 30000);
   } else if (name === 'nodes') {
@@ -1415,20 +1694,72 @@ function updateUptimePill() {
 }
 
 // ── Skills panel ───────────────────────────────────────────────────────────
+let ALL_SKILLS = [];
+let currentSkillFilter = 'all';
+let currentSkillSearch = '';
+
 async function loadSkills() {
+  const grid = document.getElementById('skills-grid');
+  if (!grid.querySelector('.skeleton-card')) {
+    grid.innerHTML = Array(4).fill(0).map(() => `
+      <div class="skeleton-card">
+        <div class="skill-card-top">
+          <div class="skeleton skeleton-icon"></div>
+          <div class="skill-info">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-text-sm" style="margin-top:4px"></div>
+          </div>
+        </div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text" style="width:60%"></div>
+      </div>
+    `).join('');
+  }
   hideErr('skills-error', 'skills-error-msg');
   try {
     const skills = await api('/api/skills');
-    renderSkills(skills);
+    ALL_SKILLS = skills || [];
+    document.getElementById('skill-count').textContent = `${ALL_SKILLS.length} skill${ALL_SKILLS.length !== 1 ? 's' : ''}`;
+    filterSkills(currentSkillSearch);
   } catch (err) {
     showErr('skills-error', 'skills-error-msg', `Failed to load skills: ${err.message}`);
+    document.getElementById('skill-count').textContent = `${ALL_SKILLS.length} skill${ALL_SKILLS.length !== 1 ? 's' : ''}`;
   }
+}
+
+function setSkillFilter(filter) {
+  currentSkillFilter = filter;
+  document.querySelectorAll('.skill-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  filterSkills(currentSkillSearch);
+}
+
+function filterSkills(q) {
+  currentSkillSearch = q;
+  q = q.toLowerCase().trim();
+  const filtered = ALL_SKILLS.filter(s => {
+    const name = (s.name || '').toLowerCase();
+    const desc = (s.description || '').toLowerCase();
+    const file = (s.file || s.executor || '').toLowerCase();
+    const matchesSearch = !q || name.includes(q) || desc.includes(q) || file.includes(q);
+    const matchesFilter = currentSkillFilter === 'all' || 
+      (currentSkillFilter === 'enabled' && s.enabled) ||
+      (currentSkillFilter === 'disabled' && !s.enabled);
+    return matchesSearch && matchesFilter;
+  });
+  renderSkills(filtered);
+  document.getElementById('skill-count').textContent = `${filtered.length} of ${ALL_SKILLS.length}`;
 }
 
 function renderSkills(skills) {
   const grid = document.getElementById('skills-grid');
   if (!skills || skills.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚡</div>No skills loaded yet</div>';
+    grid.innerHTML = `<div class="skill-no-results">
+      <div class="skill-no-results-icon">🔍</div>
+      <div>No skills found</div>
+      <div style="font-size:12px;color:var(--text-faint);margin-top:4px">Try adjusting your search or filters</div>
+    </div>`;
     return;
   }
   grid.innerHTML = skills.map(s => `
@@ -1437,13 +1768,15 @@ function renderSkills(skills) {
         <div class="skill-icon">⚡</div>
         <div class="skill-info">
           <div class="skill-name" title="${esc(s.name)}">${esc(s.name)}</div>
-          <div class="skill-file">${esc(s.file || s.executor || '')}</div>
+          <div class="skill-meta">
+            <span class="skill-file">${esc(s.file || s.executor || 'No file')}</span>
+          </div>
         </div>
       </div>
-      <div class="skill-desc">${esc(s.description || 'No description')}</div>
+      <div class="skill-desc">${esc(s.description || 'No description available')}</div>
       <div class="skill-footer">
         <span class="skill-badge ${s.enabled ? 'on' : 'off'}">${s.enabled ? 'Enabled' : 'Disabled'}</span>
-        <label class="toggle-wrap" title="${s.enabled ? 'Disable' : 'Enable'} skill">
+        <label class="toggle-wrap" title="${s.enabled ? 'Disable' : 'Enable'} skill" onclick="event.stopPropagation()">
           <div class="toggle">
             <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSkill('${esc(s.name)}', this)" />
             <div class="toggle-track"></div>
@@ -1887,11 +2220,162 @@ async function loadScreenshots() {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Escape') { e.target.blur(); return; }
+    if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'input') {
+      e.preventDefault();
+      sendMsg();
+      return;
+    }
+    return;
+  }
+  
+  const panelKeys = ['1','2','3','4','5','6','7','8','9'];
+  const panels = ['chat', 'skills', 'nodes', 'memory', 'status', 'settings', 'usage', 'agents', 'screenshots'];
+  const idx = panelKeys.indexOf(e.key);
+  if (e.altKey && idx !== -1) {
+    e.preventDefault();
+    showPanel(panels[idx]);
+    return;
+  }
+  
+  if (e.key === '?' && e.shiftKey) {
+    e.preventDefault();
+    showShortcuts();
+  }
+  
+  if (e.key === 'c' && e.altKey) {
+    e.preventDefault();
+    toggleCanvas();
+  }
+  
+  if (e.key === 't' && e.altKey) {
+    e.preventDefault();
+    toggleTheme();
+  }
+  
+  if (e.key === 'p' && e.altKey) {
+    e.preventDefault();
+    document.getElementById('theme-picker').classList.toggle('show');
+  }
+  
+  if (e.key === 'Escape') {
+    const c = document.getElementById('canvas');
+    if (c.classList.contains('open')) toggleCanvas();
+  }
+});
+
+function showShortcuts() {
+  const shortcuts = [
+    ['Alt + 1-9', 'Switch panels'],
+    ['Alt + C', 'Toggle canvas'],
+    ['Alt + T', 'Toggle light/dark'],
+    ['Alt + P', 'Color picker'],
+    ['Escape', 'Close canvas / blur input'],
+    ['Enter', 'Send message'],
+    ['Shift+Enter', 'New line in message'],
+    ['?', 'Show this help'],
+  ];
+  const html = shortcuts.map(([k,v]) => `<div style="display:flex;justify-content:space-between;gap:24px;padding:6px 0;border-bottom:1px solid var(--border)"><code style="color:var(--accent)">${k}</code><span style="color:var(--text-dim)">${v}</span></div>`).join('');
+  const modal = document.createElement('div');
+  modal.id = 'shortcuts-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn 0.15s';
+  modal.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;max-width:360px;width:90%"><div style="font-size:16px;font-weight:600;margin-bottom:16px">Keyboard Shortcuts</div>${html}<button onclick="this.closest('#shortcuts-modal').remove()" style="margin-top:16px;width:100%;padding:8px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer">Close</button></div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+// ── Theme toggle ───────────────────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isLight = html.dataset.theme === 'light';
+  const newTheme = isLight ? 'dark' : 'light';
+  html.dataset.theme = newTheme;
+  localStorage.setItem('aura_theme', newTheme);
+  const slider = document.getElementById('theme-toggle');
+  if (slider) slider.checked = newTheme === 'light';
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const isLight = document.documentElement.dataset.theme === 'light';
+  document.getElementById('theme-icon-dark').style.display = isLight ? 'none' : '';
+  document.getElementById('theme-icon-light').style.display = isLight ? '' : 'none';
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('aura_theme');
+  if (saved === 'light') {
+    document.documentElement.dataset.theme = 'light';
+  }
+  const slider = document.getElementById('theme-toggle');
+  if (slider) slider.checked = saved === 'light';
+  const savedAccent = localStorage.getItem('aura_accent');
+  if (savedAccent) {
+    document.documentElement.style.setProperty('--accent', savedAccent);
+    document.documentElement.style.setProperty('--accent-glow', savedAccent + '40');
+    document.documentElement.style.setProperty('--accent-dim', savedAccent + '30');
+  }
+  updateThemeIcon();
+}
+
+function toggleThemePicker(e) {
+  const picker = document.getElementById('theme-picker');
+  if (picker.classList.contains('show')) {
+    picker.classList.remove('show');
+  } else {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    picker.style.right = 'auto';
+    picker.style.left = rect.left + 'px';
+    picker.classList.add('show');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const picker = document.getElementById('theme-picker');
+  const btn = document.getElementById('theme-btn');
+  if (picker.classList.contains('show') && !picker.contains(e.target) && !btn.contains(e.target)) {
+    picker.classList.remove('show');
+  }
+});
+
+function updateAccentColor(color) {
+  document.documentElement.style.setProperty('--accent', color);
+  document.documentElement.style.setProperty('--accent-glow', color + '40');
+  document.documentElement.style.setProperty('--accent-dim', color + '30');
+  localStorage.setItem('aura_accent', color);
+}
+
+function updateTealColor(color) {
+  document.documentElement.style.setProperty('--teal', color);
+  document.documentElement.style.setProperty('--teal-dim', color + '26');
+}
+
+function updateRedColor(color) {
+  document.documentElement.style.setProperty('--red', color);
+  document.documentElement.style.setProperty('--red-dim', color + '1f');
+}
+
+function updateBgColor(color) {
+  document.documentElement.style.setProperty('--bg', color);
+}
+
+function applyPreset(btn) {
+  const accent = btn.dataset.accent;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateAccentColor(accent);
+}
+
 function waitForMarked() {
   if (typeof marked === 'undefined') {
     setTimeout(waitForMarked, 100);
     return;
   }
+  initTheme();
   setupMarked();
   connect();
   connectCanvas();
