@@ -1,5 +1,4 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
-import crypto from 'crypto';
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
 import type { GatewayEvent } from './types.js';
 
@@ -7,7 +6,6 @@ export class SignalAdapter implements ChannelAdapter {
   readonly channel_id = 'signal';
   private proc: ChildProcessWithoutNullStreams | null = null;
   private handlers: Array<(event: GatewayEvent) => void> = [];
-  private phoneNumber = '';
   private buffer = '';
   private rpcId = 0;
 
@@ -16,7 +14,6 @@ export class SignalAdapter implements ChannelAdapter {
     const cliPath = config['signal_cli'] as string | undefined ?? '/usr/local/bin/signal-cli';
 
     if (!phone) throw new Error('Signal phone_number required (or SIGNAL_PHONE_NUMBER env)');
-    this.phoneNumber = phone;
 
     // Launch signal-cli in JSON-RPC daemon mode
     this.proc = spawn(cliPath, [
@@ -76,7 +73,7 @@ export class SignalAdapter implements ChannelAdapter {
     const node_id = `signal_${from}`;
     const event: GatewayEvent = {
       type: 'event', event: 'utterance',
-      node_id, session_id: crypto.randomUUID(),
+      node_id, session_id: node_id,
       ts: Date.now(),
       payload: { text, routing_hint: 'simple' },
     };

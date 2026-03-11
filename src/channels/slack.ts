@@ -1,6 +1,5 @@
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
 import type { GatewayEvent } from './types.js';
-import crypto from 'crypto';
 
 type SlackAppLike = {
   message(handler: (args: { message: unknown; say: unknown }) => Promise<void>): void;
@@ -40,7 +39,7 @@ export class SlackAdapter implements ChannelAdapter {
       const node_id = `slack_${userId}`;
       const event: GatewayEvent = {
         type: 'event', event: 'utterance',
-        node_id, session_id: crypto.randomUUID(),
+        node_id, session_id: node_id,
         ts: Date.now(),
         payload: { text, routing_hint: 'complex' },
       };

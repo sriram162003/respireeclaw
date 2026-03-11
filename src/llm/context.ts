@@ -67,9 +67,7 @@ export class ContextBuilder {
       system += `\n\nYou are currently talking with: unknown contact (node_id: ${event.node_id})`;
       system += `\nIf they introduce themselves, save them to contacts.md using the filesystem skill.`;
     }
-    system += `\nNever mention, reveal, or discuss the AI model, LLM provider, or ` +
-              `technology powering you. If asked, say you are ${agent.name} and describe ` +
-              `your capabilities below — nothing more.`;
+    system += `\nYou are ${agent.name}. Be friendly, helpful, and conversational.`;
 
     // ── Capabilities summary ──────────────────────────────────────────────────
     // Build from the actual loaded tool definitions so this always stays in sync.
@@ -79,93 +77,36 @@ export class ContextBuilder {
     );
 
     if (nonInternalTools.length > 0) {
-      system += `\n\nYour capabilities (tools you can use):`;
-      for (const t of nonInternalTools) {
-        system += `\n- ${t.name}: ${t.description}`;
-      }
-      system += `\n\nWhen asked what you can do, describe these capabilities naturally in ` +
-                `your own voice — do not list raw tool names. ALWAYS mention that you can ` +
-                `send messages to Telegram and other channels, and that you can create new ` +
-                `skills on the fly with create_skill.`;
+      // Summarize key capabilities naturally instead of listing all tools
+      const skillCount = nonInternalTools.length;
+      system += `\n\nYou have access to ${skillCount} skills and can help with many tasks including ` +
+                `cloud management, scheduling, web search, messaging, and more.`;
     }
 
-    // ── Gateway self-awareness ────────────────────────────────────────────────
-    // Tell the agent about its own infrastructure so it can answer accurately
-    // when users ask about ports, endpoints, or the system's status.
-    const bind     = config.security.bind_address ?? '127.0.0.1';
-    const restPort = config.security.rest_port   ?? 3002;
-    const wcPort   = (config.channels['webchat']?.['port'] as number | undefined) ?? 3000;
-    const cvPort   = config.canvas.port          ?? 3001;
-
-    system += `\n\nYou are running as the AURA Gateway on this machine. Your own endpoints:`;
-    system += `\n- REST API (webhooks, status, reminders): http://${bind}:${restPort}`;
-    system += `\n- WebChat WebSocket (browser UI):         ws://${bind}:${wcPort}`;
-    system += `\n- Canvas WebSocket (live canvas):         ws://${bind}:${cvPort}/canvas`;
-    system += `\n- EC2 Control Panel (visual dashboard):  http://${bind}:${restPort}/dashboard2`;
-    system += `\n- LLM Config Dashboard:                  http://${bind}:${restPort}/dashboard`;
-    system += `\nWhen the user asks about a port or service, refer to the above — ` +
-              `port ${restPort} is YOUR REST API, not an external webhook receiver.`;
-    system += `\n\nEC2 Dashboard API (use these when working with ec2_workflow_automation):`;
-    system += `\n- View live workflows:  GET  http://${bind}:${restPort}/dashboard2/api/workflows`;
-    system += `\n- Run a workflow:       POST http://${bind}:${restPort}/dashboard2/api/run  { name, steps[] }`;
-    system += `\n- Load templates:       GET  http://${bind}:${restPort}/dashboard2/api/templates`;
-    system += `\nAlways tell the user to open http://${bind}:${restPort}/dashboard2 to see live workflow status.`;
-
     // ── Live channel connections ───────────────────────────────────────────────
-    // Tell the agent exactly which channels are active and what node_ids to use,
-    // so it never has to guess when the user asks it to send a message.
     const enabledChannels = Object.entries(config.channels)
       .filter(([, cfg]) => (cfg as Record<string, unknown>)['enabled'] === true)
       .map(([name]) => name);
 
-    system += `\n\nYour active channels (you can send messages to these right now):`;
-    for (const ch of enabledChannels) {
-      const chCfg = config.channels[ch] as Record<string, unknown>;
-      if (ch === 'webchat') {
-        system += `\n- webchat (browser UI at port ${wcPort})`;
-      } else if (ch === 'telegram') {
-        const ids = (chCfg['allowed_ids'] as (string | number)[] | undefined) ?? [];
-        system += `\n- telegram — send_message node_id format: telegram_<chat_id>`;
-        if (ids.length > 0) {
-          system += `\n  Authorised chat IDs: ${ids.join(', ')}`;
-          system += `\n  To text the user: send_message({ node_id: "telegram_${ids[0]}", text: "..." })`;
-        }
-      } else {
-        system += `\n- ${ch}`;
-      }
+    if (enabledChannels.length > 0) {
+      system += `\n\nYou can send messages through: ${enabledChannels.join(', ')}.`;
     }
-    system += `\n\nYour assigned channels (from agents.yaml): ${agent.channels.filter(c => c !== '__default__').join(', ') || 'none explicitly assigned'}`;
-    system += `\nYour config and allowed IDs are in ~/.aura/config.yaml — use config_read or allowed_ids_add/remove to inspect or change them.`;
 
     // ── Installed skills ──────────────────────────────────────────────────────
-    // List skills by name so the agent can acknowledge them accurately.
     if (installedSkills && installedSkills.length > 0) {
-      system += `\n\nYour installed skills (already active — refer to these by name when asked):`;
-      for (const s of installedSkills) {
-        system += `\n- ${s.name}: ${s.description}`;
-      }
-      system += `\nThese skills are installed and ready to use. Always acknowledge them by name when the user asks what skills you have.`;
+      const skillNames = installedSkills.map(s => s.name).join(', ');
+      system += `\n\nYour installed skills: ${skillNames}`;
     }
 
     // ── AWS Credentials ───────────────────────────────────────────────────────
-    system += `\n\n## AWS Credentials`;
-    system += `\nIMPORTANT: You can set AWS credentials yourself using the "set_aws_credentials" tool (not "cloud_automation"!).`;
-    system += `\nUse the tool named "set_aws_credentials" to save AWS access key, secret key, and region.`;
-    system += `\nExample call: set_aws_credentials({ access_key_id: "AKIA...", secret_access_key: "...", region: "ap-southeast-1" })`;
-    system += `\nYou do NOT need to ask the user to set environment variables - you can configure AWS directly via this tool.`;
-    system += `\nValid AWS regions: ap-southeast-1, ap-southeast-2, ap-south-1, us-east-1, us-west-2, eu-west-1, etc.`;
-    system += `\nAfter setting credentials, use "get_aws_credentials_status" to verify they're configured.`;
+    system += `\n\nYou can set AWS credentials using the "set_aws_credentials" tool.`;
 
     // ── Long-term profiles ────────────────────────────────────────────────────
-    // What the agent knows about the user and about itself, learned over time.
     if (userProfile.trim()) {
-      system += `\n\n## What I know about the user\n${userProfile.slice(0, 3000)}`;
+      system += `\n\nWhat I know about you: ${userProfile.slice(0, 2000)}`;
     }
     if (selfKnowledge.trim()) {
-      system += `\n\n## What I know about myself\n${selfKnowledge.slice(0, 2000)}`;
-      system += `\n\nIMPORTANT: The tool list above is the authoritative source of your capabilities. ` +
-                `If any self-knowledge entry contradicts an available tool, the tool list wins. ` +
-                `Never refuse to use a tool that is present in your tool list based on a memory entry.`;
+      system += `\n\nWhat I know about myself: ${selfKnowledge.slice(0, 1000)}`;
     }
 
     // ── Time & memory ─────────────────────────────────────────────────────────

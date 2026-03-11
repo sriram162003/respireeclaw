@@ -1,6 +1,7 @@
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
 import type { GatewayEvent } from './types.js';
-import crypto from 'crypto';
+import os from 'os';
+import path from 'path';
 
 export class WhatsAppAdapter implements ChannelAdapter {
   readonly channel_id = 'whatsapp';
@@ -10,7 +11,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
   async init(_config: ChannelConfig): Promise<void> {
     const { Client, LocalAuth } = await import('whatsapp-web.js');
     const client = new Client({
-      authStrategy: new LocalAuth({ dataPath: `${process.env['HOME']}/.aura/tokens/whatsapp` }),
+      authStrategy: new LocalAuth({ dataPath: path.join(os.homedir(), '.aura', 'tokens', 'whatsapp') }),
       puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox'] },
     });
     this.client = client;
@@ -31,7 +32,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
       const node_id = `whatsapp_${from}`;
       const event: GatewayEvent = {
         type: 'event', event: 'utterance',
-        node_id, session_id: crypto.randomUUID(),
+        node_id, session_id: node_id,
         ts: Date.now(),
         payload: { text: body, routing_hint: 'simple' },
       };

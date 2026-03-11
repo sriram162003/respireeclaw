@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import type { LLMRouter } from '../llm/router.js';
 import type { SkillsEngine } from '../skills/engine.js';
-import type { GatewayConfig } from '../config/loader.js';
 import type { LLMMessage, ToolDefinition } from '../llm/types.js';
 import type { SkillContext } from '../skills/types.js';
 
@@ -224,7 +223,6 @@ export class AgentOrchestrator {
   constructor(
     private llm:    LLMRouter,
     private skills: SkillsEngine,
-    private config: GatewayConfig,
   ) {}
 
   getToolDef(): ToolDefinition {
