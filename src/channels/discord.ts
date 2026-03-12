@@ -1,6 +1,5 @@
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
 import type { GatewayEvent } from './types.js';
-import crypto from 'crypto';
 
 export class DiscordAdapter implements ChannelAdapter {
   readonly channel_id = 'discord';
@@ -28,7 +27,7 @@ export class DiscordAdapter implements ChannelAdapter {
       const node_id = `discord_${userId}`;
       const event: GatewayEvent = {
         type: 'event', event: 'utterance',
-        node_id, session_id: crypto.randomUUID(),
+        node_id, session_id: node_id,
         ts: Date.now(),
         payload: { text: content, routing_hint: 'complex' },
       };

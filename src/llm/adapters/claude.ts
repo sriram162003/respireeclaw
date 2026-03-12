@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLMAdapter, LLMParams, LLMResponse, LLMMessage, ToolCall, ToolDefinition } from '../types.js';
+import type { LLMAdapter, LLMParams, LLMResponse, ToolCall } from '../types.js';
 
 export class ClaudeAdapter implements LLMAdapter {
   private client: Anthropic;

@@ -2,6 +2,7 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { createChildLogger } from './logger.js';
 import {
   loadConfig, loadAgents, AURA_DIR, WORKSPACE_DIR,
 } from './config/loader.js';
@@ -43,6 +44,8 @@ import type { SelfWriteArgs } from './skills/self_write.js';
 const MAX_TOOL_ITERATIONS = 25;
 const START_TIME = Date.now();
 
+const log = createChildLogger('server');
+
 const tokenStats: TokenStats = { total_input: 0, total_output: 0, calls: [] };
 
 // ── Skills node_modules symlink ───────────────────────────────────────────────
@@ -68,9 +71,9 @@ function ensureSkillsNodeModules(): void {
 
   try {
     fs.symlinkSync(gwModules, skillsMods, 'dir');
-    console.log('[Skills] Linked gateway node_modules → ~/.aura/skills/node_modules');
+    log.info('Linked gateway node_modules');
   } catch (err) {
-    console.warn('[Skills] Could not symlink node_modules:', err);
+    log.warn({ err }, 'Could not symlink node_modules');
   }
 }
 
@@ -100,11 +103,11 @@ async function main(): Promise<void> {
         const newConfig = loadConfig();
         llm.reload(newConfig);
       } catch (err) {
-        console.error('[Config] Reload failed:', err);
+        log.error({ err }, 'Config reload failed');
       }
     }, 300);
   });
-  console.log(`[Config] Watching ${configPath} for live LLM changes`);
+  log.info({ path: configPath }, 'Watching for live LLM changes');
 
   const rateLimiter = new RateLimiter(20, 60_000);
   // Cleanup stale rate limit buckets and sessions every 10 minutes
@@ -119,7 +122,7 @@ async function main(): Promise<void> {
   await skills.load();
   skills.watchSkillsDir();
 
-  const orchestrator = new AgentOrchestrator(llm, skills, config);
+  const orchestrator = new AgentOrchestrator(llm, skills);
 
   // ── Canvas ────────────────────────────────────────────────────────────────
   const canvasRenderer = new CanvasRenderer();
@@ -131,7 +134,7 @@ async function main(): Promise<void> {
   webchatAdapter.setMeta(
     config.canvas.port            ?? 3001,
     config.security.rest_port     ?? 3002,
-    agents[0]?.name               ?? 'AURA',
+    agents[0]?.name              ?? config.agent.name ?? 'RespireeClaw',
     config.security.bind_address  ?? '127.0.0.1',
   );
 
@@ -287,7 +290,7 @@ async function main(): Promise<void> {
     // Deduplicate by name — first definition wins (Claude rejects duplicate tool names)
     const seen = new Set<string>();
     const allTools = rawTools.filter(t => {
-      if (seen.has(t.name)) { console.warn(`[Tools] Duplicate tool name skipped: ${t.name}`); return false; }
+      if (seen.has(t.name)) { log.warn({ toolName: t.name }, 'Duplicate tool name skipped'); return false; }
       seen.add(t.name); return true;
     });
 
@@ -320,7 +323,7 @@ async function main(): Promise<void> {
           max_tokens: params.max_tokens,
         });
       } catch (err) {
-        console.error('[Loop] LLM error:', err);
+        log.error({ err }, 'LLM error');
         await sendReply(event.node_id, `Sorry, I encountered an error. Please try again.`, agent.voice_id);
         return;
       }
@@ -366,10 +369,11 @@ async function main(): Promise<void> {
         try {
           result = await executeToolCall(call, ctx, event.session_id);
           audit.toolResult(event.node_id, call.name, true, Date.now() - t0);
+          log.debug({ toolName: call.name, durationMs: Date.now() - t0 }, 'Tool executed');
         } catch (err) {
           audit.toolResult(event.node_id, call.name, false, Date.now() - t0);
           const errMsg = err instanceof Error ? err.message : String(err);
-          console.error(`[Loop] tool_call ${call.name} FAILED:`, errMsg);
+          log.error({ err: errMsg, toolName: call.name }, 'Tool call failed');
           result = `Error: ${errMsg}`;
         }
         messages = [
@@ -379,7 +383,7 @@ async function main(): Promise<void> {
       }
     }
 
-    console.warn(`[Loop] Max iterations (${MAX_TOOL_ITERATIONS}) reached for node: ${event.node_id}`);
+  log.warn({ nodeId: event.node_id, maxIterations: MAX_TOOL_ITERATIONS }, 'Max iterations reached');
     await sendReply(event.node_id, 'I\'m having trouble completing this request. Please try rephrasing.', null);
   }
 
@@ -408,7 +412,7 @@ async function main(): Promise<void> {
     ctx: SkillContext,
     _session_id: string,
   ): Promise<unknown> {
-    console.log(`[Loop] tool_call: ${call.name}`);
+    log.debug({ toolName: call.name, args: call.args }, 'Executing tool call');
     const args = call.args as Record<string, unknown>;
 
     // Self-write tool
@@ -483,7 +487,7 @@ async function main(): Promise<void> {
 
   // Wire channel utterance events
   channels.onMessage((event: GatewayEvent) => {
-    processEvent(event).catch(err => console.error('[Loop] channel event error:', err));
+    processEvent(event).catch(err => log.error({ err, nodeId: event.node_id }, 'Channel event error'));
   });
 
   // ── Heartbeat ─────────────────────────────────────────────────────────────
@@ -524,29 +528,29 @@ async function main(): Promise<void> {
   });
   await restApi.start();
 
-  console.log('\n✅ AURA Gateway started');
-  console.log(`   REST API      : http://${config.security.bind_address}:${config.security.rest_port}`);
+  log.info('AURA Gateway started');
+  log.info({ restPort: config.security.rest_port, bindAddress: config.security.bind_address }, 'REST API listening');
   if (config.canvas.enabled)
-    console.log(`   Canvas WS     : ws://${config.security.bind_address}:${config.canvas.port}/canvas`);
-  console.log(`   Agents loaded : ${agents.length}`);
-  console.log(`   Skills loaded : ${skills.listSkills().length}`);
+    log.info({ canvasPort: config.canvas.port }, 'Canvas WS listening');
+  log.info({ agentCount: agents.length, skillCount: skills.listSkills().length }, 'Loaded agents and skills');
 
   // ── Graceful shutdown ─────────────────────────────────────────────────────
   const shutdown = async (signal: string): Promise<void> => {
-    console.log(`\n[Gateway] Received ${signal}, shutting down...`);
+    log.info({ signal }, 'Shutting down');
     scheduler.stop();
     await restApi.stop();
     await canvasServer.stop();
     await channels.destroy();
-    console.log('[Gateway] Shutdown complete');
+    memory.close();
+    log.info('Shutdown complete');
     process.exit(0);
   };
 
-  process.on('SIGINT',  () => { shutdown('SIGINT').catch(console.error); });
-  process.on('SIGTERM', () => { shutdown('SIGTERM').catch(console.error); });
+  process.on('SIGINT',  () => { shutdown('SIGINT').catch(err => log.error({ err }, 'Shutdown error')); });
+  process.on('SIGTERM', () => { shutdown('SIGTERM').catch(err => log.error({ err }, 'Shutdown error')); });
 }
 
 main().catch((err) => {
-  console.error('[Gateway] Fatal startup error:', err);
+  log.fatal({ err }, 'Fatal startup error');
   process.exit(1);
 });

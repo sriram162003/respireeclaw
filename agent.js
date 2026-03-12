@@ -906,12 +906,19 @@ function cmdStop() {
   // PID file
   const pid = readPid();
   if (!pid) {
-    console.log(warn('Not running'));
+    // No PID file — try killing by port instead
+    console.log(warn('No PID file — trying to stop by port...'));
+    killGatewayPortsAndWait();
+    console.log(ok('Stopped processes on gateway ports'));
     return;
   }
   if (!isRunning(pid)) {
     console.log(warn(`Process ${pid} not found — cleaning up stale PID file`));
     fs.unlinkSync(PID_FILE);
+    // Also try killing by port as fallback
+    console.log(warn('Also attempting to kill by port...'));
+    killGatewayPortsAndWait();
+    console.log(ok('Stopped processes on gateway ports'));
     return;
   }
   try {

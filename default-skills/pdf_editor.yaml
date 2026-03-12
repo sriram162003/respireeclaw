@@ -1,37 +1,346 @@
 name: pdf_editor
 version: 1.0.0
-description: Edit PDF files including merging, splitting, extracting pages, adding text/images, filling forms, and converting to/from other formats. Uses browser-based PDF manipulation tools and APIs.
+description: Comprehensive PDF editor with full document manipulation capabilities. Supports merging, splitting, extracting pages, adding signatures, annotations, watermarks, text overlays, images, converting between Word and PDF, filling forms, page reordering, and more.
 executor: pdf_editor.ts
 enabled: true
-source: self_written
-requires_env: []
+source: human
+requires_env:
+  - PDF_SIGNATURE_KEY
 tools:
-  - name: browser
-    description: Use browser automation to interact with online PDF tools like iLovePDF, Smallpdf, PDF24 for operations that require web-based processing
+  - name: pdf_merge
+    description: Merge multiple PDF files into a single document. Provide an array of PDF file paths in the desired order.
     parameters:
       type: object
       properties:
-        action: { type: string, description: "Browser action to perform: open, click, type, read, upload, download" }
-        url: { type: string, description: "URL to open in browser" }
-        selector: { type: string, description: "CSS selector or element description to interact with" }
-        value: { type: string, description: "Value to type or text to enter" }
-        wait_for: { type: string, description: "Element or condition to wait for after action" }
-      required: [action]
-  - name: pdf_read_write
-    description: Read and write PDF files and other documents to/from the workspace filesystem
+        input_files:
+          type: array
+          items:
+            type: string
+          description: "Array of PDF file paths to merge in order"
+        output_file:
+          type: string
+          description: "Output filename for the merged PDF"
+      required:
+        - input_files
+        - output_file
+  - name: pdf_split
+    description: Split a PDF into multiple files. Can extract specific pages, page ranges, or split into individual pages.
     parameters:
       type: object
       properties:
-        action: { type: string, description: "Filesystem action: read, write, list, delete, copy, move" }
-        path: { type: string, description: "File path in the workspace" }
-        content: { type: string, description: "Content to write (for write action, base64 for binary files)" }
-        encoding: { type: string, description: "File encoding: utf8, base64, binary" }
-      required: [action, path]
-  - name: pdf_search
-    description: Search for PDF manipulation APIs, tools, documentation, and solutions for specific PDF operations
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        pages:
+          type: string
+          description: "Page specification: '1-3' for range, '1,3,5' for specific pages, 'all' for each page individually"
+        output_prefix:
+          type: string
+          description: "Output filename prefix for split files"
+      required:
+        - input_file
+        - pages
+  - name: pdf_extract_pages
+    description: Extract specific pages from a PDF and save as a new file.
     parameters:
       type: object
       properties:
-        query: { type: string, description: "Search query for finding PDF tools, APIs, or solutions" }
-        num_results: { type: string, description: "Number of results to return (default: 5)" }
-      required: [query]
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        page_numbers:
+          type: string
+          description: "Page numbers to extract: '1,3,5' or '1-5' or 'all'"
+        output_file:
+          type: string
+          description: "Output filename for the extracted PDF"
+      required:
+        - input_file
+        - page_numbers
+        - output_file
+  - name: pdf_add_signature
+    description: Add a signature to a PDF document. Supports image signatures (PNG with transparent background) or typed signatures.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the signed PDF"
+        signature_type:
+          type: string
+          description: "Type of signature: 'image' (PNG file) or 'typed' (text signature)"
+          enum:
+            - image
+            - typed
+        signature_value:
+          type: string
+          description: "For image: path to PNG signature file. For typed: the signature text"
+        page_number:
+          type: number
+          description: "Page number to place signature (default: 1)"
+          default: 1
+        x_position:
+          type: number
+          description: "X position from left edge in points (default: 100)"
+          default: 100
+        y_position:
+          type: number
+          description: "Y position from bottom in points (default: 100)"
+          default: 100
+        width:
+          type: number
+          description: "Signature width in points (default: 150)"
+          default: 150
+      required:
+        - input_file
+        - output_file
+        - signature_type
+        - signature_value
+  - name: pdf_add_text
+    description: Add text overlay to PDF pages. Supports positioning, font size, color, and custom fonts.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the modified PDF"
+        text:
+          type: string
+          description: "Text content to add"
+        page_numbers:
+          type: string
+          description: "Pages to add text: '1' or '1,2,3' or '1-5' or 'all' (default: all)"
+          default: all
+        x_position:
+          type: number
+          description: "X position from left in points (default: 100)"
+          default: 100
+        y_position:
+          type: number
+          description: "Y position from bottom in points (default: 700)"
+          default: 700
+        font_size:
+          type: number
+          description: "Font size in points (default: 12)"
+          default: 12
+        font_color:
+          type: string
+          description: "Font color as hex (default: #000000)"
+          default: '#000000'
+      required:
+        - input_file
+        - output_file
+        - text
+  - name: pdf_add_watermark
+    description: Add a watermark (text or image) across PDF pages. Supports rotation, opacity, and positioning.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the watermarked PDF"
+        watermark_type:
+          type: string
+          description: "Type: 'text' or 'image'"
+          enum:
+            - text
+            - image
+        watermark_value:
+          type: string
+          description: "For text: the watermark text. For image: path to image file"
+        page_numbers:
+          type: string
+          description: "Pages to watermark: 'all' or specific pages (default: all)"
+          default: all
+        opacity:
+          type: number
+          description: "Opacity 0-1 (default: 0.3)"
+          default: 0.3
+        rotation:
+          type: number
+          description: "Rotation angle in degrees (default: 45)"
+          default: 45
+        font_size:
+          type: number
+          description: "Font size for text watermark (default: 60)"
+          default: 60
+        color:
+          type: string
+          description: "Text color hex for text watermark (default: #CCCCCC)"
+          default: '#CCCCCC'
+      required:
+        - input_file
+        - output_file
+        - watermark_type
+        - watermark_value
+  - name: pdf_add_image
+    description: Add an image (PNG, JPG) to PDF pages. Supports positioning and scaling.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the modified PDF"
+        image_path:
+          type: string
+          description: "Path to the image file (PNG or JPG)"
+        page_number:
+          type: number
+          description: "Page number to add image (default: 1)"
+          default: 1
+        x_position:
+          type: number
+          description: "X position from left in points (default: 100)"
+          default: 100
+        y_position:
+          type: number
+          description: "Y position from bottom in points (default: 500)"
+          default: 500
+        width:
+          type: number
+          description: "Image width in points (default: 200)"
+          default: 200
+        height:
+          type: number
+          description: "Image height in points (auto-calculated if not provided)"
+      required:
+        - input_file
+        - output_file
+        - image_path
+  - name: pdf_rotate_pages
+    description: Rotate pages in a PDF by 90, 180, or 270 degrees.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the rotated PDF"
+        page_rotation:
+          type: string
+          description: "Page specification: '1:90' (page 1 rotate 90°), 'all:180', or '1,2,3:90'"
+        rotation:
+          type: number
+          description: "Global rotation if not specified per page (90, 180, 270)"
+      required:
+        - input_file
+        - output_file
+        - page_rotation
+  - name: pdf_compress
+    description: Compress a PDF file to reduce file size. Uses multiple compression strategies.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the compressed PDF"
+        quality:
+          type: string
+          description: "Compression quality: 'low', 'medium', 'high' (default: medium)"
+          enum:
+            - low
+            - medium
+            - high
+          default: medium
+      required:
+        - input_file
+        - output_file
+  - name: word_to_pdf
+    description: Convert a Microsoft Word document (.docx, .doc) to PDF format.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input Word document"
+        output_file:
+          type: string
+          description: "Output filename for the PDF (default: input filename with .pdf extension)"
+      required:
+        - input_file
+  - name: pdf_to_word
+    description: Convert a PDF document to Microsoft Word format (.docx).
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the Word document (default: input filename with .docx extension)"
+      required:
+        - input_file
+  - name: pdf_info
+    description: Get information about a PDF file including page count, title, author, creation date, file size.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the PDF file"
+      required:
+        - input_file
+  - name: pdf_list_pages
+    description: List all pages in a PDF with their dimensions and content summary.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the PDF file"
+      required:
+        - input_file
+  - name: pdf_reorder_pages
+    description: Reorder pages in a PDF. Specify the new page order.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the reordered PDF"
+        new_order:
+          type: string
+          description: "New page order: '3,1,2' moves page 3 to position 1, etc."
+      required:
+        - input_file
+        - output_file
+        - new_order
+  - name: pdf_remove_pages
+    description: Remove specific pages from a PDF.
+    parameters:
+      type: object
+      properties:
+        input_file:
+          type: string
+          description: "Path to the input PDF file"
+        output_file:
+          type: string
+          description: "Output filename for the modified PDF"
+        pages_to_remove:
+          type: string
+          description: "Pages to remove: '1,3,5' or '2-5' or 'all'"
+      required:
+        - input_file
+        - output_file
+        - pages_to_remove

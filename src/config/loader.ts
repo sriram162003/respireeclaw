@@ -57,7 +57,7 @@ function loadYaml<T>(filePath: string, defaultVal: T): T {
 export function loadConfig(): GatewayConfig {
   const configPath = path.join(AURA_DIR, 'config.yaml');
   const defaults: GatewayConfig = {
-    agent: { name: 'AURA', persona: 'You are AURA, a personal AI agent.' },
+    agent: { name: 'RespireeClaw', persona: 'You are RespireeClaw, a friendly and helpful personal AI assistant. Keep responses natural and conversational.' },
     llm: {
       default: 'claude-haiku-4-5',
       routing: { simple: 'claude-haiku-4-5', complex: 'claude-sonnet-4-6', vision: 'claude-sonnet-4-6', creative: 'claude-opus-4', offline: 'ollama/llama3.2:3b' },

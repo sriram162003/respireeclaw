@@ -1,6 +1,5 @@
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
 import type { GatewayEvent, IncomingAttachment, UtterancePayload } from './types.js';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

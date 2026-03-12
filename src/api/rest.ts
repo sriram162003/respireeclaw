@@ -12,7 +12,7 @@ import type { SkillsEngine } from '../skills/engine.js';
 import type { MemoryManager } from '../memory/manager.js';
 import type { CanvasRenderer } from '../canvas/renderer.js';
 import type { AgentOrchestrator } from '../agents/orchestrator.js';
-import { authenticateRequest, addApiKey, listApiKeys, revokeApiKey, initDefaultKey, loadKeysFile } from '../security/auth.js';
+import { authenticateRequest, addApiKey, listApiKeys, revokeApiKey, loadKeysFile } from '../security/auth.js';
 
 function checkDashboardAuth(req: IncomingMessage, res: ServerResponse): boolean {
   const keys = loadKeysFile();
@@ -107,19 +107,6 @@ function loadSavedWorkflows(): Array<{ id: string; name: string; steps: Workflow
   } catch { return []; }
 }
 
-function loadWorkflowRuns(): Map<string, { workflow_id: string; status: string; data: unknown; timestamp: string }> {
-  try {
-    const db = wf2Db();
-    const rows = db.prepare('SELECT workflow_id, status, data, timestamp FROM workflow_runs').all() as Array<{ workflow_id: string; status: string; data: string; timestamp: string }>;
-    db.close();
-    const map = new Map<string, { workflow_id: string; status: string; data: unknown; timestamp: string }>();
-    for (const r of rows) {
-      map.set(r.workflow_id, { workflow_id: r.workflow_id, status: r.status, data: JSON.parse(r.data || '{}'), timestamp: r.timestamp });
-    }
-    return map;
-  } catch { return new Map(); }
-}
-
 function loadWorkflowEvents(): Array<{ workflow_id: string; status: string; data: unknown; timestamp: string }> {
   try {
     const db = wf2Db();
@@ -147,14 +134,6 @@ function saveSavedWorkflow(id: string, name: string, steps: WorkflowStep[], sche
   try {
     const db = wf2Db();
     db.prepare('INSERT OR REPLACE INTO saved_workflows (id, name, steps, created, schedule, enabled) VALUES (?, ?, ?, ?, ?, ?)').run(id, name, JSON.stringify(steps), new Date().toISOString(), schedule || null, enabled ?? 0);
-    db.close();
-  } catch { /* non-fatal */ }
-}
-
-function deleteSavedWorkflow(id: string): void {
-  try {
-    const db = wf2Db();
-    db.prepare('DELETE FROM saved_workflows WHERE id = ?').run(id);
     db.close();
   } catch { /* non-fatal */ }
 }
@@ -302,52 +281,6 @@ const WF3_TEMPLATES = [
 interface WorkflowStep {
   operation: string;
   params: Record<string, string>;
-}
-
-const EC2_SIM: Record<string, (p: Record<string, string>) => string> = {
-  describe_instances:  p => `Found i-0${Math.random().toString(36).slice(2,9)}, i-0${Math.random().toString(36).slice(2,9)} in ${p['region'] ?? 'us-east-1'}`,
-  start_instances:     p => `Started ${p['instance_ids'] ?? 'instances'} — state: pending`,
-  stop_instances:      p => `Stopped ${p['instance_ids'] ?? 'instances'} — state: stopping`,
-  reboot_instances:    p => `Rebooted ${p['instance_ids'] ?? 'instances'} successfully`,
-  create_snapshot:     p => `snap-${Math.random().toString(36).slice(2,10)} created for ${p['instance_id'] ?? 'i-0abc1234'}`,
-  scale_asg:           p => `ASG '${p['asg_name'] ?? 'my-asg'}' scaling to ${p['desired_capacity'] ?? '3'} instances`,
-  deploy_application:  p => `Deployed ${p['app_name'] ?? 'app'} v${p['version'] ?? '1.0'} → ${p['environment'] ?? 'production'}`,
-  check_health:        p => `Health OK — ${p['instance_ids'] ?? 'instances'}: system=ok, instance=ok`,
-  run_ssm_command:     p => `SSM cmd-${Math.random().toString(36).slice(2,10)} queued on ${p['instance_ids'] ?? 'instances'}`,
-};
-
-async function runWorkflowSimulation(workflowId: string, name: string, steps: WorkflowStep[]): Promise<void> {
-  const post = (status: string, idx: number, extra: Record<string, unknown> = {}): void => {
-    const entry = {
-      workflow_id: workflowId,
-      status,
-      data: { step: steps[idx]?.operation ?? 'done', step_index: idx, total_steps: steps.length, workflow_name: name, ...extra },
-      timestamp: new Date().toISOString(),
-    };
-    workflowUpdates.set(workflowId, entry);
-    workflowEvents.push(entry);
-    if (workflowEvents.length > 100) workflowEvents.splice(0, workflowEvents.length - 100);
-  };
-
-  post('running', 0);
-  for (let i = 0; i < steps.length; i++) {
-    await new Promise(r => setTimeout(r, 1200 + Math.random() * 1300));
-    const simFn = EC2_SIM[steps[i]!.operation] ?? (() => 'Operation completed');
-    const result = simFn(steps[i]!.params);
-    if (i < steps.length - 1) {
-      post('running', i + 1, { last_result: result });
-    } else {
-      const entry = {
-        workflow_id: workflowId,
-        status: 'completed',
-        data: { step: 'completed', step_index: i, total_steps: steps.length, workflow_name: name, last_result: result },
-        timestamp: new Date().toISOString(),
-      };
-      workflowUpdates.set(workflowId, entry);
-      workflowEvents.push(entry);
-      if (workflowEvents.length > 100) workflowEvents.splice(0, workflowEvents.length - 100);
-    }
-  }
 }
 
 interface SkillToolExecutor {
@@ -1019,10 +952,37 @@ export class RestAPI {
       // POST /api/skills/:skillName/tools/:toolName  { ...args }
       const skillToolMatch = path.match(/^\/api\/skills\/([^/]+)\/tools\/([^/]+)$/);
       if (method === 'POST' && skillToolMatch) {
-        const [, skillName, toolName] = skillToolMatch;
+        const [, , toolName] = skillToolMatch;
         const body = await this.readBody(req);
         const args = body ? JSON.parse(body) : {};
         const result = await this.params.skillsEngine.execute(toolName!, args as Record<string, unknown>, {
+          node_id: 'rest-api', session_id: `rest-${Date.now()}`, agent_id: 'rest',
+          memory: { search: async () => [] },
+          channel:{ send: async () => {} },
+          canvas: { append: () => {}, clear: () => {} },
+        });
+        return this.json(res, 200, result);
+      }
+
+      // ── GitHub Skill Installer API ───────────────────────────────────────────
+      // POST /api/skills/install/github { repo: "owner/repo", branch?: "main", skill_path?: "skills" }
+      if (method === 'POST' && path === '/api/skills/install/github') {
+        const body = await this.readBody(req);
+        const args = body ? JSON.parse(body) : {};
+        const result = await this.params.skillsEngine.execute('install_skill_from_github', args as Record<string, unknown>, {
+          node_id: 'rest-api', session_id: `rest-${Date.now()}`, agent_id: 'rest',
+          memory: { search: async () => [] },
+          channel:{ send: async () => {} },
+          canvas: { append: () => {}, clear: () => {} },
+        });
+        return this.json(res, 200, result);
+      }
+
+      // GET /api/skills/github/search?q=query
+      const githubSearchMatch = path.match(/^\/api\/skills\/github\/search\?q=(.+)$/);
+      if (method === 'GET' && githubSearchMatch) {
+        const query = decodeURIComponent(githubSearchMatch[1]!);
+        const result = await this.params.skillsEngine.execute('search_github_skills', { query, per_page: 10 }, {
           node_id: 'rest-api', session_id: `rest-${Date.now()}`, agent_id: 'rest',
           memory: { search: async () => [] },
           channel:{ send: async () => {} },

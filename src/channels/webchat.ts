@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import crypto from 'crypto';
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
-import type { GatewayEvent } from './types.js';
+import type { GatewayEvent, UtterancePayload, IncomingAttachment } from './types.js';
 import { validateApiKey, loadKeysFile } from '../security/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -20,7 +20,7 @@ export class WebChatAdapter implements ChannelAdapter {
 
   private canvasPort  = 3001;
   private restPort    = 3002;
-  private agentName   = 'AURA';
+  private agentName   = 'RespireeClaw';
   private bindAddress = '127.0.0.1';
 
   /** Inject gateway metadata before init(). */
@@ -95,8 +95,8 @@ export class WebChatAdapter implements ChannelAdapter {
         }
       }
 
-      const node_id    = `browser_${crypto.randomUUID()}`;
-      const session_id = crypto.randomUUID();
+      const node_id = `browser_${crypto.randomUUID()}`;
+      const session_id = node_id; // Use node_id as session_id for persistent conversation
       this.sessions.set(node_id, ws);
 
       // Greet the browser with identity info
@@ -111,7 +111,22 @@ export class WebChatAdapter implements ChannelAdapter {
         try {
           const msg  = JSON.parse(data.toString()) as Record<string, unknown>;
           const text = msg['text'] as string | undefined;
-          if (!text) return;
+          const files = msg['files'] as Array<{ name: string; type: string; data: string }> | undefined;
+          
+          const hasImage = files && files.length > 0 && files.some(f => f.type.startsWith('image/'));
+          if (!text && !hasImage) return;
+          
+          const payload: UtterancePayload = { 
+            text: text || '[Image attached]',
+            routing_hint: hasImage ? 'vision' : 'simple'
+          };
+          
+          if (hasImage) {
+            const firstImage = files!.find(f => f.type.startsWith('image/'));
+            if (firstImage) payload.image_b64 = firstImage.data;
+          }
+          
+          payload.attachments = files as IncomingAttachment[];
 
           const event: GatewayEvent = {
             type:      'event',
@@ -119,7 +134,7 @@ export class WebChatAdapter implements ChannelAdapter {
             node_id,
             session_id,
             ts:        Date.now(),
-            payload:   { text, routing_hint: 'simple' },
+            payload,
           };
           for (const h of this.handlers) h(event);
         } catch { /* ignore malformed messages */ }

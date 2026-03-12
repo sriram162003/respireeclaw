@@ -1,5 +1,4 @@
 import http from 'http';
-import crypto from 'crypto';
 import type { ChannelAdapter, ChannelConfig, OutboundMessage } from './interface.js';
 import type { GatewayEvent } from './types.js';
 
@@ -62,7 +61,7 @@ export class GoogleChatAdapter implements ChannelAdapter {
     const node_id = `gchat_${spaceId}`;
     const event: GatewayEvent = {
       type: 'event', event: 'utterance',
-      node_id, session_id: crypto.randomUUID(),
+      node_id, session_id: node_id,
       ts: Date.now(),
       payload: { text, routing_hint: 'complex' },
     };

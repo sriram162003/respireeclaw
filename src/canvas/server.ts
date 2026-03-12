@@ -3,6 +3,9 @@ import type { GatewayConfig } from '../config/loader.js';
 import type { CanvasEvent } from './types.js';
 import { CanvasRenderer } from './renderer.js';
 import { validateApiKey } from '../security/auth.js';
+import { createChildLogger } from '../logger.js';
+
+const log = createChildLogger('canvas');
 
 /**
  * WebSocket server for live Canvas updates on port 3001.
@@ -59,8 +62,8 @@ export class CanvasServer {
       ws.on('error', () => this.clients.delete(ws));
     });
 
-    this.wss.on('error', (err) => console.error('[Canvas] Server error:', err));
-    console.log(`[Canvas] Server listening on ${bind_address}:${port}/canvas`);
+    this.wss.on('error', (err) => log.error({ err }, 'Server error'));
+    log.info({ bindAddress: bind_address, port }, 'Server listening');
   }
 
   broadcast(event: CanvasEvent): void {
@@ -76,6 +79,6 @@ export class CanvasServer {
     for (const ws of this.clients) ws.close();
     this.clients.clear();
     await new Promise<void>((resolve) => this.wss?.close(() => resolve()));
-    console.log('[Canvas] Server stopped');
+    log.info('Server stopped');
   }
 }

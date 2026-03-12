@@ -573,14 +573,13 @@
     .bubble h3 { font-size: 1em; font-weight: 600; margin: 8px 0 4px; }
     .bubble ul, .bubble ol { padding-left: 20px; margin: 6px 0; }
     .bubble li { margin: 3px 0; }
-    .bubble strong { font-weight: 600; color: #fff; }
+    .bubble strong { font-weight: 600; color: var(--text); }
     .bubble em { color: var(--text-dim); font-style: italic; }
     .bubble a { color: var(--accent); text-decoration: none; }
     .bubble a:hover { text-decoration: underline; }
     .bubble hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
     .bubble blockquote { border-left: 3px solid var(--accent); padding-left: 12px; margin: 8px 0; color: var(--text-dim); }
-
-    .bubble :not(pre) > code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 0.85em; color: #e2c083; }
+    .bubble :not(pre) > code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 0.85em; color: var(--accent); }
     .bubble table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 8px 0; }
     .bubble th, .bubble td { border: 1px solid var(--border); padding: 7px 10px; }
     .bubble th { background: var(--surface2); font-weight: 600; }
@@ -615,8 +614,11 @@
     @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
 
     #input-area { padding: 14px 20px 18px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
-    #input-wrap { display: flex; align-items: flex-end; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px; transition: border-color 0.2s; }
+    #input-wrap { display: flex; align-items: flex-end; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 8px 12px; transition: border-color 0.2s; }
     #input-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    #attach { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; display: flex; align-items: center; border-radius: 6px; transition: all 0.15s; flex-shrink: 0; }
+    #attach:hover { background: var(--surface3); color: var(--text); }
+    #attach svg { width: 20px; height: 20px; }
     #input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.5; resize: none; min-height: 22px; max-height: 160px; overflow-y: auto; }
     #input::placeholder { color: var(--text-faint); }
     #input::-webkit-scrollbar { width: 4px; }
@@ -627,6 +629,11 @@
     #send:disabled{ background: var(--surface3); cursor: default; transform: none; }
     #send svg { width: 16px; height: 16px; }
     #input-hint { font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 6px; }
+    #file-preview { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 20px; }
+    .file-chip { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 12px; color: var(--text); }
+    .file-chip img { width: 20px; height: 20px; border-radius: 4px; object-fit: cover; }
+    .file-chip .remove-file { cursor: pointer; color: var(--text-dim); font-size: 14px; }
+    .file-chip .remove-file:hover { color: var(--red); }
 
     /* ── Canvas panel ─────────────────────────────────────────────────── */
     #canvas { width: 0; flex-shrink: 0; overflow: hidden; background: var(--surface); border-left: none; display: flex; flex-direction: column; transition: width 0.3s cubic-bezier(.4,0,.2,1); }
@@ -819,7 +826,7 @@
   <!-- Header -->
   <header id="header">
     <div id="agent-avatar">A</div>
-    <span id="agent-name">AURA</span>
+    <span id="agent-name">RespireeClaw</span>
     <div id="status-badge">
       <div id="status-dot"></div>
       <span id="status-text">Connecting…</span>
@@ -899,7 +906,7 @@
           <div id="msgs">
             <div id="welcome">
               <div class="welcome-icon">✦</div>
-              <h2 id="welcome-h">Hi, I'm AURA</h2>
+              <h2 id="welcome-h">Hi, I'm RespireeClaw</h2>
               <p>Your personal AI assistant — ask me anything or give me a task to run.</p>
             </div>
           </div>
@@ -916,6 +923,12 @@
           </div>
           <div id="input-area">
             <div id="input-wrap">
+              <button id="attach" type="button" title="Attach file or image" onclick="document.getElementById('file-input').click()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+              <input type="file" id="file-input" accept="image/*,.pdf,.doc,.docx,.txt,.json,.md" multiple style="display:none" onchange="handleFileSelect(this)">
               <textarea id="input" rows="1" placeholder="Message…" autocomplete="off" spellcheck="true"></textarea>
               <button id="send" title="Send (Enter)" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -924,7 +937,8 @@
                 </svg>
               </button>
             </div>
-            <div id="input-hint">Enter to send · Shift+Enter for new line</div>
+            <div id="file-preview"></div>
+            <div id="input-hint">Enter to send · Shift+Enter for new line · Click 📎 to attach files</div>
           </div>
         </div>
         <!-- Canvas panel -->
@@ -1548,14 +1562,65 @@ function scrollBottom() { $msgs.scrollTo({ top: $msgs.scrollHeight, behavior: 's
 function showTyping()   { $typing.classList.add('show'); scrollBottom(); }
 function hideTyping()   { $typing.classList.remove('show'); }
 
+// ── File handling ─────────────────────────────────────────────────────────────
+let attachedFiles = [];
+
+function handleFileSelect(input) {
+  const files = input.files;
+  if (!files) return;
+  
+  const preview = document.getElementById('file-preview');
+  if (!preview) return;
+  
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result.split(',')[1];
+      attachedFiles.push({ name: file.name, type: file.type, data });
+      renderFileChips();
+    };
+    reader.readAsDataURL(file);
+  });
+  
+  input.value = '';
+}
+
+function renderFileChips() {
+  const preview = document.getElementById('file-preview');
+  if (!preview) return;
+  
+  preview.innerHTML = attachedFiles.map((f, i) => {
+    const isImage = f.type.startsWith('image/');
+    const icon = isImage 
+      ? `<img src="data:${f.type};base64,${f.data}" alt="${f.name}">` 
+      : `<span>📄</span>`;
+    return `<div class="file-chip">${icon}<span>${f.name}</span><span class="remove-file" onclick="removeFile(${i})">×</span></div>`;
+  }).join('');
+}
+
+function removeFile(index) {
+  attachedFiles.splice(index, 1);
+  renderFileChips();
+}
+
 // ── Send ───────────────────────────────────────────────────────────────────
 function doSend() {
   const text = $input.value.trim();
-  if (!text || !connected) return;
-  appendMsg('user', text);
-  ws.send(JSON.stringify({ text }));
+  if (!text && attachedFiles.length === 0) return;
+  
+  const payload = { text: text || '' };
+  
+  if (attachedFiles.length > 0) {
+    payload.files = attachedFiles;
+  }
+  
+  appendMsg('user', text || (attachedFiles.length > 0 ? `[${attachedFiles.length} file(s) attached]` : ''));
+  ws.send(JSON.stringify(payload));
+  
   $input.value = '';
   $input.style.height = 'auto';
+  attachedFiles = [];
+  renderFileChips();
   lastRole = null; lastGroup = null;
   showTyping();
 }
